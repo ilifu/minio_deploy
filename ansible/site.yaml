@@ -1,0 +1,6 @@
+---
+# file: site.yaml
+- hosts: minio_servers
+  roles:
+    - xfs_mounts
+    - minio

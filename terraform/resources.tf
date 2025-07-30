@@ -21,7 +21,10 @@ resource "local_file" "ansible_inventory" {
         id     = v.id
         volume_id = v.volume_id
         device = v.device
+        label = "MINIODRIVE${idx + 1}"
       }]
+      locale = var.locale
+      timezone = var.timezone
     }
   )
   filename = "inventory.yaml"

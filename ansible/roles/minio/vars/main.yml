@@ -1,3 +1,5 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # vars file for minio
+minio_version: "20250613113347.0.0_amd64"
+minio_checksum: "sha512:5ac7d7a9fc29380ea4b2eec559436554bbb18eec64b66c2d3cb117f4bd38dc1b9af730cf54034b9f9a7c68f5de0e214b9e5c251dc680f30bd36eaadd38356039"

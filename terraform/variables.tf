@@ -40,3 +40,13 @@ variable "minio_volume_name_prefix" {
     type = string
     default = "minio-data"
 }
+
+variable "locale" {
+  type = string
+  default = "en_ZA.UTF-8"
+}
+
+variable "timezone" {
+  type = string
+  default = "Africa/Johannesburg"
+}
