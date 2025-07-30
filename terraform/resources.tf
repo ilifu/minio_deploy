@@ -19,6 +19,7 @@ resource "local_file" "ansible_inventory" {
       volumes       = [for idx, v in openstack_compute_volume_attach_v2.minio_volume_attachment : {
         name   = openstack_blockstorage_volume_v3.minio_volume[idx].name
         id     = v.id
+        volume_id = v.volume_id
         device = v.device
       }]
     }

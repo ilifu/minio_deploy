@@ -9,5 +9,8 @@ minio_servers:
     domain_name: ${ domain_name }
     volumes:
 %{ for volume in volumes ~}
-      ${ volume.name }: ${ volume.id} (${ volume.device })
+      ${ volume.name }:
+        id: ${ volume.id}
+        volume_id: ${ volume.volume_id }
+        device: ${ volume.device }
 %{ endfor ~}
