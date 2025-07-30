@@ -1,0 +1,55 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for xfs_mounts
+- name: Ensure xfsprogs package is installed
+  ansible.builtin.package:
+    name: xfsprogs
+    state: present
+  become: true
+
+- name: Ensure xfs kernel module is loaded
+  become: true
+  ansible.builtin.modprobe:
+    name: xfs
+    state: present
+
+#- name: Check if devices are already formatted as xfs
+#  ansible.builtin.command:
+#      cmd: blkid -o export "{{ item.value.device }}"
+#  loop: "{{ volumes | dict2items }}"
+#  register: blkid_results
+#  when: item.value.device is defined and item.value.device | length > 0
+#  ignore_errors: true
+
+- name: Make xfs filesystem on devices
+  become: true
+  community.general.filesystem:
+    fstype: xfs
+    dev: "{{ item.value.device }}"
+  loop: "{{ volumes | dict2items }}"
+  when: item.value.device is defined and item.value.device | length > 0
+
+- name: Check xfs labels
+  tags: label_xfs
+  become: true
+  ansible.builtin.command:
+    cmd: xfs_admin -l "{{ item.value.device }}"
+  loop: "{{ volumes | dict2items }}"
+  register: xfs_labels
+  when: item.value.device is defined and item.value.device | length > 0
+
+- name: Show xfs labels
+  tags: label_xfs
+  ansible.builtin.debug:
+      msg: "XFS label: {{ item.stdout }}"
+  loop: "{{ xfs_labels.results }}"
+
+- name: Label xfs filesystems
+  become: true
+  tags: label_xfs
+  ansible.builtin.command:
+    cmd: xfs_admin -L "{{ item.value.label }}" "{{ item.value.device }}"
+  loop: "{{ volumes | dict2items }}"
+  loop_control:
+    index_var: idx
+  when: '"label = \"" ~ item.value.label ~ "\"" not in xfs_labels.results[idx].stdout'
