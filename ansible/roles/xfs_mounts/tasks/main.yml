@@ -53,3 +53,39 @@
   loop_control:
     index_var: idx
   when: '"label = \"" ~ item.value.label ~ "\"" not in xfs_labels.results[idx].stdout'
+
+- name: Create mount points
+  tags: mount_xfs
+  become: true
+  ansible.builtin.file:
+    path: "/mnt/{{ item.value.label }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ volumes | dict2items }}"
+
+- name: Ensure fstab up to date
+  become: true
+  tags: mount_xfs
+  ansible.posix.mount:
+    path: "/mnt/{{ item.value.label }}"
+    src: LABEL={{ item.value.label }}
+    fstype: xfs
+    opts: defaults,noatime
+    passno: 2
+    state: mounted
+  loop: "{{ volumes | dict2items }}"
+
+- name: Create disable XFS Retry on Error script
+  become: true
+  ansible.builtin.copy:
+    dest: /usr/local/bin/disable_xfs_retry_on_error.sh
+    src: disable_xfs_retry_on_error.sh
+    mode: '0755'
+
+- name: Create cron job to run disable XFS Retry on Error at reboot
+  become: true
+  ansible.builtin.cron:
+    name: "Disable XFS Retry on Error"
+    job: "/usr/local/bin/disable_xfs_retry_on_error.sh"
+    state: present
+    special_time: reboot

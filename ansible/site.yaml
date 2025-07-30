@@ -2,5 +2,10 @@
 # file: site.yaml
 - hosts: minio_servers
   roles:
-    - xfs_mounts
-    - minio
+    - role: xfs_mounts
+      tags:
+        - xfs_mounts
+
+    - role: minio
+      tags:
+        - minio

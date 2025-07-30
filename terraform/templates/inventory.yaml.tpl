@@ -9,6 +9,7 @@ minio_servers:
     domain_name: ${ domain_name }
     locale: ${ locale }
     timezone: ${ timezone }
+    minio_admin_password: ${ minio_admin_password }
     volumes:
 %{ for volume in volumes ~}
       ${ volume.name }:

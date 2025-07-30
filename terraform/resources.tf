@@ -1,13 +1,7 @@
-# output "volumes" {
-#   value = [
-#     for v in openstack_compute_volume_attach_v2.minio_volume_attachment :
-#     {
-#       name   = v.volume_id
-#       id     = v.id
-#       device = v.device
-#     }
-#   ]
-# }
+resource "random_password" "minio_admin_password" {
+  length  = 20
+  special = true
+}
 
 resource "local_file" "ansible_inventory" {
   content = templatefile("templates/inventory.yaml.tpl",
@@ -25,6 +19,7 @@ resource "local_file" "ansible_inventory" {
       }]
       locale = var.locale
       timezone = var.timezone
+      minio_admin_password = random_password.minio_admin_password.result
     }
   )
   filename = "inventory.yaml"
