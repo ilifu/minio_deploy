@@ -1,0 +1,7 @@
+*-openrc.sh
+.venv
+inventory.yaml
+terraform.tfstate*
+.idea
+.terraform
+.terraform.lock.hcl
