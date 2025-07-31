@@ -4,17 +4,15 @@ Repository with Terraform and Ansible code to deploy a MinIO S3 object storage s
 
 ## Table of Contents
 
-- [minio_deploy](#minio_deploy)
-  - [Table of Contents](#table-of-contents)
-  - [Description](#description)
-  - [Terraform Variables](#terraform-variables)
-  - [Running Terraform](#running-terraform)
-  - [Running Ansible](#running-ansible)
-  - [Accessing the MinIO Console](#accessing-the-minio-console)
-  - [Using the MinIO and AWS Clients](#using-the-minio-and-aws-clients)
-    - [MinIO Client (`mc`)](#minio-client-mc)
-    - [AWS CLI Client](#aws-cli-client)
-  - [Acknowledgements](#acknowledgements)
+- [Description](#description)
+- [Terraform Variables](#terraform-variables)
+- [Running Terraform](#running-terraform)
+- [Running Ansible](#running-ansible)
+- [Accessing the MinIO Console](#accessing-the-minio-console)
+- [Using the MinIO and AWS Clients](#using-the-minio-and-aws-clients)
+  - [MinIO Client (`mc`)](#minio-client-mc)
+  - [AWS CLI Client](#aws-cli-client)
+- [Acknowledgements](#acknowledgements)
 
 ## Description
 
