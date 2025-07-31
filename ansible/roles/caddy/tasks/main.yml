@@ -31,6 +31,16 @@
     state: present
   become: true
 
+- name: Ensure Log directory exists
+  tags: log_directory
+  ansible.builtin.file:
+    path: /var/log/caddy
+    state: directory
+    owner: caddy
+    group: caddy
+    mode: '0755'
+  become: true
+
 - name: Ensure Caddy service is enabled and started
   ansible.builtin.systemd:
     name: caddy

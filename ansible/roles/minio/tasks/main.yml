@@ -48,6 +48,8 @@
     owner: root
     group: minio-user
   become: true
+  register: minio_env_file
+  notify: restart_minio
 
 - name: Stop and disable apparmor
   tags: disable_apparmor
@@ -56,6 +58,31 @@
     enabled: false
     state: stopped
   become: true
+
+- name: Ensure Log directory exists
+  tags: [log_directory, minio_logging]
+  ansible.builtin.file:
+    path: /var/log/minio
+    state: directory
+    owner: minio-user
+    group: minio-user
+    mode: '0750'
+  become: true
+
+- name: Ensure logging is configured in systemd file
+  tags: minio_logging
+  ansible.builtin.lineinfile:
+    path: /usr/lib/systemd/system/minio.service
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+    create: true
+    insertafter: 'ExecStart='
+  loop:
+    - { regexp: '^StandardOutput=', line: 'StandardOutput=append:/var/log/minio/minio.log' }
+    - { regexp: '^StandardError=', line: 'StandardError=append:/var/log/minio.err' }
+  become: true
+  notify: restart_minio
 
 - name: Enable and start MinIO service
   ansible.builtin.systemd:
@@ -80,5 +107,14 @@
   ansible.builtin.command:
       cmd: caddy reload --config /etc/caddy/Caddyfile
   when: caddyfile_result.changed
+  become: true
+
+- name: Download MinIO client
+  tags: minio_client
+  ansible.builtin.get_url:
+    url: https://dl.min.io/client/mc/release/linux-amd64/mc
+    dest: /usr/local/bin/mc
+    mode: '0755'
+    checksum: "sha512:8a3418c68a93023067bd80c88375560ee8e7cfe2217201a77c6ecdc80ca51f6760102eb4ac1ef3a2a5fe3e73192980364970ef3cf71c8143882364202413acfd"
   become: true
 

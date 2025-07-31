@@ -1,3 +1,8 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # handlers file for minio
+- name: restart_minio
+  ansible.builtin.systemd:
+    name: minio
+    state: restarted
+  become: true

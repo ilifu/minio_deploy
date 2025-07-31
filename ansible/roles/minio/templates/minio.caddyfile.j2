@@ -1,3 +1,7 @@
-{{ domain_name }}:9000 {
-    reverse_proxy localhost:9001
+{{ domain_name }}:443 {
+	bind {{ private_ip }}
+	reverse_proxy 127.0.0.1:9001
+	log {
+        output file /var/log/caddy/minio.log
+    }
 }

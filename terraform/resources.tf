@@ -7,6 +7,7 @@ resource "local_file" "ansible_inventory" {
   content = templatefile("templates/inventory.yaml.tpl",
     {
       floating_ip = openstack_networking_floatingip_v2.minio.address
+      private_ip = openstack_compute_instance_v2.minio_server.access_ip_v4
       ssh_public_key = var.ssh_key_public
       domain_name = var.domain_name
       # volumes = [ for volume in openstack_blockstorage_volume_v3.minio_volume.*: volume ]

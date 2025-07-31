@@ -7,6 +7,8 @@ minio_servers:
     ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o ControlPersist=15m -i ${ ssh_public_key }'
     ansible_user: ubuntu
     domain_name: ${ domain_name }
+    public_ip: ${ floating_ip }
+    private_ip: ${ private_ip }
     locale: ${ locale }
     timezone: ${ timezone }
     minio_admin_password: ${ minio_admin_password }
