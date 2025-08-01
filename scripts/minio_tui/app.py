@@ -5,6 +5,7 @@ from textual.widgets import Header, Footer, DataTable, Input, Static, Button, Tr
 from textual.widgets.tree import TreeNode
 from textual.widgets.data_table import RowDoesNotExist
 from textual.screen import ModalScreen
+from textual.events import Focus
 from .minio_client import MinioClient
 
 # --- Modal Screens ---
@@ -94,13 +95,14 @@ class ShowURLScreen(ModalScreen):
 class MinioTUI(App):
     CSS_PATH = "app.css"
 
+    # Define all possible bindings - visibility controlled by check_action
     BINDINGS = [
         ("d", "toggle_dark", "Toggle dark mode"),
         ("c", "create_bucket", "Create Bucket"),
-        ("x", "delete_item", "Delete"),
         ("u", "upload_file", "Upload"),
         ("l", "download_file", "Download"),
         ("p", "presign_url", "Get URL"),
+        ("x", "delete_item", "Delete"),
         ("q", "quit", "Quit"),
     ]
 
@@ -121,8 +123,37 @@ class MinioTUI(App):
         yield Footer()
 
     def on_mount(self) -> None:
+        # The BINDINGS class variable handles the initial state.
         self.query_one("#buckets_table").focus()
         self.run_worker(self.load_buckets_and_counts, thread=True)
+
+    def on_focus(self, event: Focus) -> None:
+        """Update footer when focus changes."""
+        # Force footer to refresh to show current context bindings
+        footer = self.query_one(Footer)
+        footer.refresh()
+
+    def check_action(self, action: str, parameters) -> bool | None:
+        """Control which actions are available based on current focus."""
+        focused = self.focused
+        
+        # Always allow navigation and system actions
+        system_actions = {"toggle_dark", "quit", "focus_next", "focus_previous", "app.focus_next", "app.focus_previous"}
+        if action in system_actions:
+            return True
+        
+        # Get available actions based on focus
+        if focused and focused.id == "buckets_table":
+            # Bucket context actions
+            allowed_actions = {"create_bucket", "delete_item"}
+        elif focused and focused.id == "objects_tree":
+            # Object context actions
+            allowed_actions = {"upload_file", "download_file", "presign_url", "delete_item"}
+        else:
+            # Default: allow all actions
+            return True
+        
+        return action in allowed_actions
 
     def load_buckets_and_counts(self):
         """
@@ -244,7 +275,7 @@ class MinioTUI(App):
 
     def action_delete_item(self):
         focused = self.focused
-        if isinstance(focused, DataTable):
+        if isinstance(focused, DataTable) and focused.id == "buckets_table":
             try:
                 item_name = focused.get_row_at(focused.cursor_row)[0]
                 def on_confirm_bucket(confirmed: bool):
@@ -253,14 +284,13 @@ class MinioTUI(App):
                             self.minio_client.delete_bucket(item_name)
                             self.query_one("#bucket_status").update(f"Bucket '{item_name}' deleted.")
                             self.clear_objects_tree()
-                            # Refresh the bucket list
                             self.run_worker(self.load_buckets_and_counts, thread=True)
                         except Exception as e:
                             self.set_status(f"Error: {e}")
-                self.push_screen(ConfirmDeleteScreen(item_name), on_confirm_bucket)
-            except (RowDoesNotExist, IndexError):
+                self.push_screen(ConfirmDeleteScreen(f"bucket '{item_name}'"), on_confirm_bucket)
+            except (IndexError, RowDoesNotExist):
                 return
-        elif isinstance(focused, Tree):
+        elif isinstance(focused, Tree) and focused.id == "objects_tree":
             node = focused.cursor_node
             if node and node.data:
                 item_name = node.data
@@ -272,7 +302,7 @@ class MinioTUI(App):
                             self.show_objects(self.current_bucket)
                         except Exception as e:
                             self.set_status(f"Error: {e}")
-                self.push_screen(ConfirmDeleteScreen(item_name), on_confirm_object)
+                self.push_screen(ConfirmDeleteScreen(f"object '{item_name}'"), on_confirm_object)
 
     def action_upload_file(self):
         if not self.current_bucket:
