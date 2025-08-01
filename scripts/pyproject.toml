@@ -1,0 +1,26 @@
+[project]
+name = "minio-tui"
+version = "0.1.0"
+description = "A Textual TUI for MinIO"
+authors = [
+    {name = "Dane Kennedy", email = "dane@idia.ac.za"},
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "textual",
+    "dynaconf",
+    "boto3",
+    "python-dotenv",
+]
+
+[project.scripts]
+minio-tui = "minio_tui.run:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["minio_tui*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+minio_tui = ["*.css"]

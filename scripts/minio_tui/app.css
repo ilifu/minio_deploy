@@ -1,0 +1,49 @@
+#main_container {
+    height: 1fr;
+}
+
+#buckets_panel {
+    width: 30%;
+    border-right: solid $accent;
+}
+
+#objects_panel {
+    width: 70%;
+}
+
+#buckets_table, #objects_table {
+    height: 1fr;
+}
+
+.status-bar {
+    background: $surface-darken-1;
+    color: $text;
+    height: 1;
+    padding: 0 1;
+}
+
+.modal-title {
+    text-align: center;
+    width: 100%;
+    padding: 1;
+}
+
+.modal-prompt {
+    text-align: center;
+    width: 100%;
+}
+
+.modal-container {
+    width: 50;
+    height: auto;
+    background: $surface;
+    padding: 1;
+    border: thick $primary-lighten-2;
+    align: center middle;
+}
+
+.modal-buttons {
+    width: 100%;
+    align-horizontal: right;
+    padding-top: 1;
+}
