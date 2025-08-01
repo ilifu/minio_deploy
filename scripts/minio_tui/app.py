@@ -3,6 +3,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import Header, Footer, DataTable, Input, Static, Button, Tree
 from textual.widgets.tree import TreeNode
+from datetime import datetime
 from textual.widgets.data_table import RowDoesNotExist
 from textual.screen import ModalScreen
 from textual.events import Focus
@@ -116,8 +117,69 @@ class ShowURLScreen(ModalScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss()
 
+class MetadataScreen(ModalScreen):
+    def __init__(self, object_name: str, metadata: dict, **kwargs):
+        super().__init__(**kwargs)
+        self.object_name = object_name
+        self.metadata = metadata
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-container"):
+            yield Static(f"Metadata: {self.object_name}", classes="modal-title")
+            
+            # Create metadata display
+            metadata_text = []
+            metadata_text.append(f"Size: {format_size(self.metadata.get('size', 0))}")
+            
+            if self.metadata.get('last_modified'):
+                metadata_text.append(f"Modified: {format_date(self.metadata['last_modified'])}")
+            
+            metadata_text.append(f"Content Type: {self.metadata.get('content_type', 'unknown')}")
+            metadata_text.append(f"Storage Class: {self.metadata.get('storage_class', 'STANDARD')}")
+            
+            if self.metadata.get('etag'):
+                metadata_text.append(f"ETag: {self.metadata['etag']}")
+            
+            # Show custom metadata if any
+            custom_metadata = self.metadata.get('metadata', {})
+            if custom_metadata:
+                metadata_text.append("\nCustom Metadata:")
+                for key, value in custom_metadata.items():
+                    metadata_text.append(f"  {key}: {value}")
+            
+            yield Static("\n".join(metadata_text), id="metadata_content")
+            yield Button("Close", id="close")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss()
+
 
 # --- Main App ---
+
+def format_size(size_bytes):
+    """Format file size in human readable format."""
+    if size_bytes == 0:
+        return "0 B"
+    
+    size_names = ["B", "KB", "MB", "GB", "TB"]
+    i = 0
+    while size_bytes >= 1024 and i < len(size_names) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    
+    if i == 0:
+        return f"{int(size_bytes)} {size_names[i]}"
+    else:
+        return f"{size_bytes:.1f} {size_names[i]}"
+
+def format_date(date_obj):
+    """Format datetime object for display."""
+    if date_obj is None:
+        return "Unknown"
+    
+    if hasattr(date_obj, 'strftime'):
+        return date_obj.strftime("%Y-%m-%d %H:%M")
+    return str(date_obj)
 
 class MinioTUI(App):
     CSS_PATH = "app.css"
@@ -129,6 +191,7 @@ class MinioTUI(App):
         ("u", "upload_file", "Upload"),
         ("l", "download_file", "Download"),
         ("p", "presign_url", "Get URL"),
+        ("m", "show_metadata", "Metadata"),
         ("x", "delete_item", "Delete"),
         ("q", "quit", "Quit"),
     ]
@@ -175,7 +238,7 @@ class MinioTUI(App):
             allowed_actions = {"create_bucket", "delete_item"}
         elif focused and focused.id == "objects_tree":
             # Object context actions
-            allowed_actions = {"upload_file", "download_file", "presign_url", "delete_item"}
+            allowed_actions = {"upload_file", "download_file", "presign_url", "show_metadata", "delete_item"}
         else:
             # Default: allow all actions
             return True
@@ -386,6 +449,32 @@ class MinioTUI(App):
                     self.set_status(f"Error: {e}")
         
         self.push_screen(PresignURLScreen(), on_expiry_submit)
+
+    def action_show_metadata(self):
+        """Show metadata for the selected object."""
+        if self.focused.id != "objects_tree" or not self.current_bucket:
+            self.set_status("Select an object to view metadata.")
+            return
+        node = self.query_one("#objects_tree").cursor_node
+        if not node or not node.data:
+            return
+        
+        object_name = node.data
+        
+        # Run metadata fetch in a worker thread
+        def fetch_metadata():
+            try:
+                metadata = self.minio_client.get_object_metadata(self.current_bucket, object_name)
+                self.call_from_thread(self.show_metadata_modal, object_name, metadata)
+            except Exception as e:
+                self.call_from_thread(self.set_status, f"Error fetching metadata: {e}")
+        
+        self.run_worker(fetch_metadata, thread=True)
+        self.set_status("Fetching metadata...")
+
+    def show_metadata_modal(self, object_name: str, metadata: dict):
+        """Show the metadata modal with the fetched data."""
+        self.push_screen(MetadataScreen(object_name, metadata))
 
 if __name__ == "__main__":
     pass

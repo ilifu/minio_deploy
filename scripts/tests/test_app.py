@@ -26,7 +26,7 @@ class TestMinioTUI(unittest.TestCase):
     def test_check_action_system_actions(self):
         """Test that system actions are always allowed."""
         # Mock the focused property to return None (no focused widget)
-        with patch.object(self.app, 'focused', new=None):
+        with patch.object(type(self.app), 'focused', new_callable=lambda: property(lambda self: None)):
             # Test without any focused widget (should default to allow all)
             self.assertTrue(self.app.check_action("toggle_dark", {}))
             self.assertTrue(self.app.check_action("quit", {}))
@@ -41,7 +41,8 @@ class TestMinioTUI(unittest.TestCase):
         mock_buckets_table = MagicMock()
         mock_bucket_status = MagicMock()
         
-        with patch.object(self.app, 'query_one') as mock_query:
+        with patch.object(self.app, 'query_one') as mock_query, \
+             patch.object(self.app, 'show_objects') as mock_show_objects:
             # Setup mock to return our mocked widgets
             def mock_query_one(selector):
                 if selector == "#buckets_table":
@@ -66,6 +67,9 @@ class TestMinioTUI(unittest.TestCase):
             
             # Verify status update
             mock_bucket_status.update.assert_called_once_with("2 buckets found.")
+            
+            # Verify that show_objects was called with the first bucket
+            mock_show_objects.assert_called_once_with("bucket1")
 
     def test_update_object_tree(self):
         """Test that the object tree updates correctly."""

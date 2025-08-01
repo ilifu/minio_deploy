@@ -60,7 +60,7 @@ minio-tui
 The TUI features a two-panel layout:
 
 - **Left Panel**: Bucket list with object counts
-- **Right Panel**: Object tree view for the selected bucket
+- **Right Panel**: Object tree view showing folder hierarchy
 
 Use **Tab** to switch between panels. The status bar at the bottom shows context-sensitive keybindings.
 
@@ -76,6 +76,7 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 - `u` - Upload file to current bucket
 - `l` - Download selected object
 - `p` - Generate presigned URL for selected object
+- `m` - View object metadata
 - `x` - Delete selected object
 - `d` - Toggle dark mode
 - `q` - Quit application
@@ -84,7 +85,8 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 
 - **Bucket Management**: Create and delete buckets
 - **Object Operations**: Upload, download, and delete objects
+- **Object Metadata**: View file sizes, modification dates, and content types
 - **Presigned URLs**: Generate time-limited URLs (configurable expiration, default 15 minutes) 
-- **Tree View**: Navigate folder structures within buckets
+- **Smart File Types**: Automatic content type detection based on file extensions
 - **Context Menus**: Different keybindings available based on current focus
 - **Real-time Updates**: Object counts and listings update automatically

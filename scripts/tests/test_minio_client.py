@@ -82,5 +82,64 @@ class TestMinioClient(unittest.TestCase):
         self.minio_client.delete_object("my-bucket", "my-object")
         self.mock_boto3_client.delete_object.assert_called_once_with(Bucket="my-bucket", Key="my-object")
 
+    def test_list_objects_with_metadata(self):
+        """Tests that list_objects_with_metadata returns formatted object data."""
+        from datetime import datetime
+        
+        self.mock_boto3_client.list_objects_v2.return_value = {
+            "Contents": [
+                {
+                    "Key": "file1.txt",
+                    "Size": 1024,
+                    "LastModified": datetime(2023, 1, 1, 12, 0),
+                    "ETag": '"abc123"',
+                    "StorageClass": "STANDARD"
+                },
+                {
+                    "Key": "file2.jpg",
+                    "Size": 2048,
+                    "LastModified": datetime(2023, 1, 2, 14, 30),
+                    "ETag": '"def456"'
+                }
+            ]
+        }
+        
+        objects = self.minio_client.list_objects_with_metadata("my-bucket")
+        
+        self.mock_boto3_client.list_objects_v2.assert_called_once_with(Bucket="my-bucket")
+        self.assertEqual(len(objects), 2)
+        
+        # Check first object
+        self.assertEqual(objects[0]["key"], "file1.txt")
+        self.assertEqual(objects[0]["size"], 1024)
+        self.assertEqual(objects[0]["storage_class"], "STANDARD")
+        
+        # Check second object (should default storage class)
+        self.assertEqual(objects[1]["key"], "file2.jpg")
+        self.assertEqual(objects[1]["size"], 2048)
+        self.assertEqual(objects[1]["storage_class"], "STANDARD")
+
+    def test_get_object_metadata(self):
+        """Tests that get_object_metadata calls head_object and formats response."""
+        from datetime import datetime
+        
+        self.mock_boto3_client.head_object.return_value = {
+            "ContentLength": 5120,
+            "LastModified": datetime(2023, 1, 1, 10, 0),
+            "ContentType": "text/plain",
+            "ETag": '"xyz789"',
+            "StorageClass": "STANDARD",
+            "Metadata": {"custom": "value"}
+        }
+        
+        metadata = self.minio_client.get_object_metadata("my-bucket", "my-object")
+        
+        self.mock_boto3_client.head_object.assert_called_once_with(Bucket="my-bucket", Key="my-object")
+        self.assertEqual(metadata["size"], 5120)
+        self.assertEqual(metadata["content_type"], "text/plain")
+        self.assertEqual(metadata["etag"], "xyz789")
+        self.assertEqual(metadata["storage_class"], "STANDARD")
+        self.assertEqual(metadata["metadata"], {"custom": "value"})
+
 if __name__ == "__main__":
     unittest.main()

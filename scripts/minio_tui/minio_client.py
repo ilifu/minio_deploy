@@ -51,6 +51,43 @@ class MinioClient:
         response = self.client.list_objects_v2(Bucket=bucket_name)
         return [obj["Key"] for obj in response.get("Contents", [])]
 
+    def list_objects_with_metadata(self, bucket_name):
+        """Lists all objects in a bucket with metadata."""
+        response = self.client.list_objects_v2(Bucket=bucket_name)
+        objects = []
+        for obj in response.get("Contents", []):
+            objects.append({
+                'key': obj["Key"],
+                'size': obj["Size"],
+                'last_modified': obj["LastModified"],
+                'etag': obj.get("ETag", "").strip('"'),
+                'storage_class': obj.get("StorageClass", "STANDARD")
+            })
+        return objects
+
+    def get_object_metadata(self, bucket_name, object_key):
+        """Get detailed metadata for a specific object."""
+        try:
+            response = self.client.head_object(Bucket=bucket_name, Key=object_key)
+            return {
+                'size': response["ContentLength"],
+                'last_modified': response["LastModified"],
+                'content_type': response.get("ContentType", "application/octet-stream"),
+                'etag': response.get("ETag", "").strip('"'),
+                'storage_class': response.get("StorageClass", "STANDARD"),
+                'metadata': response.get("Metadata", {})
+            }
+        except Exception as e:
+            # If we can't get metadata, return minimal info
+            return {
+                'size': 0,
+                'last_modified': None,
+                'content_type': 'unknown',
+                'etag': '',
+                'storage_class': 'STANDARD',
+                'metadata': {}
+            }
+
     def upload_file(self, bucket_name, object_name, file_path):
         """Uploads a file to a bucket."""
         self.client.upload_file(file_path, bucket_name, object_name)
