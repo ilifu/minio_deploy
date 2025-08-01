@@ -39,6 +39,30 @@ class TestMinioClient(unittest.TestCase):
         self.minio_client.create_bucket("new-bucket")
         self.mock_boto3_client.create_bucket.assert_called_once_with(Bucket="new-bucket")
 
+    def test_create_bucket_with_object_lock(self):
+        """Tests that create_bucket with Object Lock calls the correct boto3 methods."""
+        self.minio_client.create_bucket("lock-bucket", object_lock_enabled=True, default_retention_days=30, default_retention_mode="GOVERNANCE")
+        
+        # Verify create_bucket was called with Object Lock enabled
+        self.mock_boto3_client.create_bucket.assert_called_once_with(
+            Bucket="lock-bucket",
+            ObjectLockEnabledForBucket=True
+        )
+        
+        # Verify put_object_lock_configuration was called for default retention
+        self.mock_boto3_client.put_object_lock_configuration.assert_called_once_with(
+            Bucket="lock-bucket",
+            ObjectLockConfiguration={
+                'ObjectLockEnabled': 'Enabled',
+                'Rule': {
+                    'DefaultRetention': {
+                        'Mode': 'GOVERNANCE',
+                        'Days': 30
+                    }
+                }
+            }
+        )
+
     def test_delete_bucket(self):
         """Tests that delete_bucket calls the correct boto3 method."""
         self.minio_client.delete_bucket("bucket-to-delete")
@@ -154,6 +178,127 @@ class TestMinioClient(unittest.TestCase):
         
         # Verify delete_object was called  
         self.mock_boto3_client.delete_object.assert_called_with(Bucket="my-bucket", Key="old-name.txt")
+
+    def test_create_directory(self):
+        """Tests that create_directory uploads an empty object with trailing slash."""
+        self.minio_client.create_directory("my-bucket", "test-folder")
+        
+        # Verify put_object was called with correct parameters
+        self.mock_boto3_client.put_object.assert_called_once_with(
+            Bucket="my-bucket",
+            Key="test-folder/",
+            Body=b''
+        )
+
+    def test_create_directory_with_slash(self):
+        """Tests that create_directory handles names that already end with slash."""
+        self.minio_client.create_directory("my-bucket", "test-folder/")
+        
+        # Verify put_object was called with correct parameters
+        self.mock_boto3_client.put_object.assert_called_once_with(
+            Bucket="my-bucket",
+            Key="test-folder/",
+            Body=b''
+        )
+
+    def test_delete_directory_empty(self):
+        """Tests that delete_directory removes empty directory."""
+        # Mock list_objects_v2 to return only the directory marker
+        self.mock_boto3_client.list_objects_v2.return_value = {
+            'Contents': [{'Key': 'test-folder/'}]
+        }
+        
+        self.minio_client.delete_directory("my-bucket", "test-folder")
+        
+        # Verify list_objects_v2 was called to check if directory is empty
+        self.mock_boto3_client.list_objects_v2.assert_called_once_with(
+            Bucket="my-bucket",
+            Prefix="test-folder/",
+            MaxKeys=2
+        )
+        
+        # Verify delete_object was called
+        self.mock_boto3_client.delete_object.assert_called_once_with(
+            Bucket="my-bucket",
+            Key="test-folder/"
+        )
+
+    def test_delete_directory_not_empty(self):
+        """Tests that delete_directory raises error for non-empty directory."""
+        # Mock list_objects_v2 to return directory marker and another object
+        self.mock_boto3_client.list_objects_v2.return_value = {
+            'Contents': [
+                {'Key': 'test-folder/'},
+                {'Key': 'test-folder/file.txt'}
+            ]
+        }
+        
+        with self.assertRaises(Exception) as context:
+            self.minio_client.delete_directory("my-bucket", "test-folder")
+        
+        self.assertIn("is not empty", str(context.exception))
+        
+        # Verify delete_object was NOT called
+        self.mock_boto3_client.delete_object.assert_not_called()
+
+    def test_set_object_retention(self):
+        """Tests that set_object_retention calls put_object_retention."""
+        from datetime import datetime
+        retain_until = datetime(2024, 12, 31, 23, 59, 59)
+        
+        self.minio_client.set_object_retention("my-bucket", "my-object", retain_until, "COMPLIANCE")
+        
+        self.mock_boto3_client.put_object_retention.assert_called_once_with(
+            Bucket="my-bucket",
+            Key="my-object",
+            Retention={
+                'Mode': 'COMPLIANCE',
+                'RetainUntilDate': retain_until
+            }
+        )
+
+    def test_get_object_retention(self):
+        """Tests that get_object_retention calls get_object_retention."""
+        from datetime import datetime
+        
+        self.mock_boto3_client.get_object_retention.return_value = {
+            'Retention': {
+                'Mode': 'GOVERNANCE',
+                'RetainUntilDate': datetime(2024, 12, 31)
+            }
+        }
+        
+        result = self.minio_client.get_object_retention("my-bucket", "my-object")
+        
+        self.mock_boto3_client.get_object_retention.assert_called_once_with(
+            Bucket="my-bucket",
+            Key="my-object"
+        )
+        self.assertEqual(result['Mode'], 'GOVERNANCE')
+
+    def test_set_object_legal_hold(self):
+        """Tests that set_object_legal_hold calls put_object_legal_hold."""
+        self.minio_client.set_object_legal_hold("my-bucket", "my-object", "ON")
+        
+        self.mock_boto3_client.put_object_legal_hold.assert_called_once_with(
+            Bucket="my-bucket",
+            Key="my-object",
+            LegalHold={'Status': 'ON'}
+        )
+
+    def test_get_object_legal_hold(self):
+        """Tests that get_object_legal_hold calls get_object_legal_hold."""
+        self.mock_boto3_client.get_object_legal_hold.return_value = {
+            'LegalHold': {'Status': 'ON'}
+        }
+        
+        result = self.minio_client.get_object_legal_hold("my-bucket", "my-object")
+        
+        self.mock_boto3_client.get_object_legal_hold.assert_called_once_with(
+            Bucket="my-bucket",
+            Key="my-object"
+        )
+        self.assertEqual(result['Status'], 'ON')
 
 if __name__ == "__main__":
     unittest.main()

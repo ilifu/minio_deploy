@@ -7,7 +7,7 @@ from pathlib import Path
 scripts_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(scripts_dir))
 
-from minio_tui.app import MinioTUI, CreateBucketScreen, UploadFileScreen, DownloadFileScreen, ConfirmDeleteScreen, ShowURLScreen, PresignURLScreen, RenameObjectScreen
+from minio_tui.app import MinioTUI, CreateBucketScreen, UploadFileScreen, DownloadFileScreen, ConfirmDeleteScreen, ShowURLScreen, PresignURLScreen, RenameObjectScreen, CreateDirectoryScreen
 from minio_tui.minio_client import MinioClient
 
 
@@ -108,11 +108,21 @@ class TestModalScreens(unittest.TestCase):
         """Test CreateBucketScreen returns correct value on submit."""
         screen = CreateBucketScreen()
         
-        # Mock the input widget
-        mock_input = MagicMock()
-        mock_input.value = "new-bucket"
+        # Mock the input widgets
+        mock_bucket_input = MagicMock()
+        mock_bucket_input.value = "new-bucket"
+        mock_retention_input = MagicMock()
+        mock_retention_input.value = ""
         
-        with patch.object(screen, 'query_one', return_value=mock_input):
+        def mock_query_one(selector):
+            if selector == "#bucket_name_input":
+                return mock_bucket_input
+            elif selector == "#retention_days_input":
+                return mock_retention_input
+            else:
+                return MagicMock()
+        
+        with patch.object(screen, 'query_one', side_effect=mock_query_one):
             # Mock button press event
             mock_button = MagicMock()
             mock_button.id = "create"
@@ -121,7 +131,13 @@ class TestModalScreens(unittest.TestCase):
             
             with patch.object(screen, 'dismiss') as mock_dismiss:
                 screen.on_button_pressed(mock_event)
-                mock_dismiss.assert_called_once_with("new-bucket")
+                expected_result = {
+                    'name': 'new-bucket',
+                    'object_lock_enabled': False,
+                    'default_retention_days': None,
+                    'default_retention_mode': 'GOVERNANCE'
+                }
+                mock_dismiss.assert_called_once_with(expected_result)
 
     def test_create_bucket_screen_cancel(self):
         """Test CreateBucketScreen returns None on cancel."""
@@ -267,6 +283,78 @@ class TestModalScreens(unittest.TestCase):
             # Mock button press event for rename
             mock_button = MagicMock()
             mock_button.id = "rename"
+            mock_event = MagicMock()
+            mock_event.button = mock_button
+            
+            with patch.object(screen, 'dismiss') as mock_dismiss:
+                screen.on_button_pressed(mock_event)
+                mock_dismiss.assert_called_once_with(None)
+
+    def test_create_directory_screen_submit(self):
+        """Test CreateDirectoryScreen returns directory name with slash."""
+        screen = CreateDirectoryScreen()
+        
+        # Mock the input widget
+        mock_input = MagicMock()
+        mock_input.value = "test-folder"
+        
+        with patch.object(screen, 'query_one', return_value=mock_input):
+            # Mock button press event for create
+            mock_button = MagicMock()
+            mock_button.id = "create"
+            mock_event = MagicMock()
+            mock_event.button = mock_button
+            
+            with patch.object(screen, 'dismiss') as mock_dismiss:
+                screen.on_button_pressed(mock_event)
+                mock_dismiss.assert_called_once_with("test-folder/")
+
+    def test_create_directory_screen_with_slash(self):
+        """Test CreateDirectoryScreen handles names that already end with slash."""
+        screen = CreateDirectoryScreen()
+        
+        # Mock the input widget with trailing slash
+        mock_input = MagicMock()
+        mock_input.value = "test-folder/"
+        
+        with patch.object(screen, 'query_one', return_value=mock_input):
+            # Mock button press event for create
+            mock_button = MagicMock()
+            mock_button.id = "create"
+            mock_event = MagicMock()
+            mock_event.button = mock_button
+            
+            with patch.object(screen, 'dismiss') as mock_dismiss:
+                screen.on_button_pressed(mock_event)
+                # Should still end with single slash
+                mock_dismiss.assert_called_once_with("test-folder/")
+
+    def test_create_directory_screen_cancel(self):
+        """Test CreateDirectoryScreen returns None on cancel."""
+        screen = CreateDirectoryScreen()
+        
+        # Mock button press event for cancel
+        mock_button = MagicMock()
+        mock_button.id = "cancel"
+        mock_event = MagicMock()
+        mock_event.button = mock_button
+        
+        with patch.object(screen, 'dismiss') as mock_dismiss:
+            screen.on_button_pressed(mock_event)
+            mock_dismiss.assert_called_once_with(None)
+
+    def test_create_directory_screen_empty_name(self):
+        """Test CreateDirectoryScreen returns None for empty name."""
+        screen = CreateDirectoryScreen()
+        
+        # Mock the input widget with empty value
+        mock_input = MagicMock()
+        mock_input.value = ""
+        
+        with patch.object(screen, 'query_one', return_value=mock_input):
+            # Mock button press event for create
+            mock_button = MagicMock()
+            mock_button.id = "create"
             mock_event = MagicMock()
             mock_event.button = mock_button
             

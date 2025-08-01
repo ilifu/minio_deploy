@@ -73,24 +73,34 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 - `q` - Quit application
 
 ### Object Panel (Right)
+- `f` - Create new directory/folder
 - `u` - Upload file to current bucket
 - `l` - Download selected object
 - `p` - Generate presigned URL for selected object
 - `m` - View object metadata
 - `r` - Rename selected object
-- `x` - Delete selected object
+- `o` - View Object Lock information
+- `t` - Set retention period (Object Lock)
+- `h` - Toggle legal hold (Object Lock)
+- `x` - Delete selected object/directory (directories must be empty)
 - `d` - Toggle dark mode
 - `q` - Quit application
 
 ## Features
 
-- **Bucket Management**: Create and delete buckets
+- **Bucket Management**: Create and delete buckets with optional Object Lock configuration
+- **Directory Management**: Create and delete directories (empty directories only)
 - **Object Operations**: Upload, download, rename, and delete objects
+- **Smart Path Prepopulation**: Upload and directory creation modals auto-populate with current path
 - **Object Metadata**: View file sizes, modification dates, and content types
+- **Object Lock Support**: Set retention periods and legal holds for WORM compliance
 - **Search & Filter**: Real-time search filtering of objects by name
 - **Presigned URLs**: Generate time-limited URLs (configurable expiration, default 15 minutes) 
 - **Smart File Types**: Automatic content type detection based on file extensions
 - **Context Menus**: Different keybindings available based on current focus
 - **Real-time Updates**: Object counts and listings update automatically
 
-**Note:** Bucket renaming is not supported by S3/MinIO - buckets are immutable once created.
+**Notes:** 
+- Bucket renaming is not supported by S3/MinIO - buckets are immutable once created
+- Object Lock must be enabled at bucket creation time - it cannot be enabled later
+- Object Lock provides WORM (Write Once Read Many) compliance with retention periods and legal holds
