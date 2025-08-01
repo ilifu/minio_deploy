@@ -83,7 +83,7 @@ class ShowURLScreen(ModalScreen):
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-container"):
             yield Static("Presigned URL", classes="modal-title")
-            yield Input(value=self.url, readonly=True)
+            yield Static(self.url, classes="url-display")
             yield Button("Close", id="close")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
