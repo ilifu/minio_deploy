@@ -141,5 +141,19 @@ class TestMinioClient(unittest.TestCase):
         self.assertEqual(metadata["storage_class"], "STANDARD")
         self.assertEqual(metadata["metadata"], {"custom": "value"})
 
+    def test_rename_object(self):
+        """Tests that rename_object calls copy_object and delete_object."""
+        self.minio_client.rename_object("my-bucket", "old-name.txt", "new-name.txt")
+        
+        # Verify copy_object was called
+        self.mock_boto3_client.copy_object.assert_called_once_with(
+            CopySource={"Bucket": "my-bucket", "Key": "old-name.txt"},
+            Bucket="my-bucket",
+            Key="new-name.txt"
+        )
+        
+        # Verify delete_object was called  
+        self.mock_boto3_client.delete_object.assert_called_with(Bucket="my-bucket", Key="old-name.txt")
+
 if __name__ == "__main__":
     unittest.main()

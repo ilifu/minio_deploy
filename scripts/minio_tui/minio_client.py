@@ -107,3 +107,15 @@ class MinioClient:
     def delete_object(self, bucket_name, object_name):
         """Deletes an object from a bucket."""
         self.client.delete_object(Bucket=bucket_name, Key=object_name)
+
+    def rename_object(self, bucket_name, old_name, new_name):
+        """Renames an object by copying it to the new name and deleting the old one."""
+        # Copy the object to the new name
+        copy_source = {'Bucket': bucket_name, 'Key': old_name}
+        self.client.copy_object(
+            CopySource=copy_source,
+            Bucket=bucket_name,
+            Key=new_name
+        )
+        # Delete the old object
+        self.client.delete_object(Bucket=bucket_name, Key=old_name)

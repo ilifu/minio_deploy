@@ -153,6 +153,30 @@ class MetadataScreen(ModalScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss()
 
+class RenameObjectScreen(ModalScreen):
+    def __init__(self, current_name: str, **kwargs):
+        super().__init__(**kwargs)
+        self.current_name = current_name
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-container"):
+            yield Static("Rename Object", classes="modal-title")
+            yield Static(f"Current name: {self.current_name}", classes="help-text")
+            yield Input(placeholder="Enter new object name", id="new_name_input", value=self.current_name)
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Rename", variant="primary", id="rename")
+                yield Button("Cancel", id="cancel")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "rename":
+            new_name = self.query_one("#new_name_input").value.strip()
+            if new_name and new_name != self.current_name:
+                self.dismiss(new_name)
+            else:
+                self.dismiss(None)
+        else:
+            self.dismiss(None)
+
 
 # --- Main App ---
 
@@ -192,6 +216,7 @@ class MinioTUI(App):
         ("l", "download_file", "Download"),
         ("p", "presign_url", "Get URL"),
         ("m", "show_metadata", "Metadata"),
+        ("r", "rename_item", "Rename"),
         ("x", "delete_item", "Delete"),
         ("q", "quit", "Quit"),
     ]
@@ -248,7 +273,7 @@ class MinioTUI(App):
             allowed_actions = {"create_bucket", "delete_item"}
         elif focused and focused.id == "objects_tree":
             # Object context actions
-            allowed_actions = {"upload_file", "download_file", "presign_url", "show_metadata", "delete_item"}
+            allowed_actions = {"upload_file", "download_file", "presign_url", "show_metadata", "rename_item", "delete_item"}
         elif focused and focused.id == "search_input":
             # Search input context - allow upload but not object-specific actions
             allowed_actions = {"upload_file"}
@@ -510,6 +535,30 @@ class MinioTUI(App):
     def show_metadata_modal(self, object_name: str, metadata: dict):
         """Show the metadata modal with the fetched data."""
         self.push_screen(MetadataScreen(object_name, metadata))
+
+    def action_rename_item(self):
+        """Rename the selected object (buckets cannot be renamed in S3/MinIO)."""
+        focused = self.focused
+        if focused and focused.id == "objects_tree" and self.current_bucket:
+            node = focused.cursor_node
+            if not node or not node.data:
+                self.set_status("Select an object to rename.")
+                return
+            
+            object_name = node.data
+            
+            def on_rename_submit(new_name):
+                if new_name:
+                    try:
+                        self.minio_client.rename_object(self.current_bucket, object_name, new_name)
+                        self.set_status(f"Object renamed from '{object_name}' to '{new_name}'.")
+                        self.show_objects(self.current_bucket)  # Refresh the list
+                    except Exception as e:
+                        self.set_status(f"Error renaming object: {e}")
+            
+            self.push_screen(RenameObjectScreen(object_name), on_rename_submit)
+        elif focused and focused.id == "buckets_table":
+            self.set_status("Bucket renaming is not supported by S3/MinIO.")
 
 if __name__ == "__main__":
     pass

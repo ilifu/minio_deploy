@@ -77,6 +77,7 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 - `l` - Download selected object
 - `p` - Generate presigned URL for selected object
 - `m` - View object metadata
+- `r` - Rename selected object
 - `x` - Delete selected object
 - `d` - Toggle dark mode
 - `q` - Quit application
@@ -84,10 +85,12 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 ## Features
 
 - **Bucket Management**: Create and delete buckets
-- **Object Operations**: Upload, download, and delete objects
+- **Object Operations**: Upload, download, rename, and delete objects
 - **Object Metadata**: View file sizes, modification dates, and content types
 - **Search & Filter**: Real-time search filtering of objects by name
 - **Presigned URLs**: Generate time-limited URLs (configurable expiration, default 15 minutes) 
 - **Smart File Types**: Automatic content type detection based on file extensions
 - **Context Menus**: Different keybindings available based on current focus
 - **Real-time Updates**: Object counts and listings update automatically
+
+**Note:** Bucket renaming is not supported by S3/MinIO - buckets are immutable once created.

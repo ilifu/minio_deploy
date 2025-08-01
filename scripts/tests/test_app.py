@@ -7,7 +7,7 @@ from pathlib import Path
 scripts_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(scripts_dir))
 
-from minio_tui.app import MinioTUI, CreateBucketScreen, UploadFileScreen, DownloadFileScreen, ConfirmDeleteScreen, ShowURLScreen, PresignURLScreen
+from minio_tui.app import MinioTUI, CreateBucketScreen, UploadFileScreen, DownloadFileScreen, ConfirmDeleteScreen, ShowURLScreen, PresignURLScreen, RenameObjectScreen
 from minio_tui.minio_client import MinioClient
 
 
@@ -221,6 +221,58 @@ class TestModalScreens(unittest.TestCase):
                 screen.on_button_pressed(mock_event)
                 # Should default to 15 minutes
                 mock_dismiss.assert_called_once_with(15)
+
+    def test_rename_object_screen_submit(self):
+        """Test RenameObjectScreen returns new name on submit."""
+        screen = RenameObjectScreen("old-name.txt")
+        
+        # Mock the input widget
+        mock_input = MagicMock()
+        mock_input.value = "new-name.txt"
+        
+        with patch.object(screen, 'query_one', return_value=mock_input):
+            # Mock button press event for rename
+            mock_button = MagicMock()
+            mock_button.id = "rename"
+            mock_event = MagicMock()
+            mock_event.button = mock_button
+            
+            with patch.object(screen, 'dismiss') as mock_dismiss:
+                screen.on_button_pressed(mock_event)
+                mock_dismiss.assert_called_once_with("new-name.txt")
+
+    def test_rename_object_screen_cancel(self):
+        """Test RenameObjectScreen returns None on cancel."""
+        screen = RenameObjectScreen("old-name.txt")
+        
+        # Mock button press event for cancel
+        mock_button = MagicMock()
+        mock_button.id = "cancel"
+        mock_event = MagicMock()
+        mock_event.button = mock_button
+        
+        with patch.object(screen, 'dismiss') as mock_dismiss:
+            screen.on_button_pressed(mock_event)
+            mock_dismiss.assert_called_once_with(None)
+
+    def test_rename_object_screen_same_name(self):
+        """Test RenameObjectScreen returns None when name unchanged."""
+        screen = RenameObjectScreen("test-name.txt")
+        
+        # Mock the input widget with same name
+        mock_input = MagicMock()
+        mock_input.value = "test-name.txt"  # Same as original
+        
+        with patch.object(screen, 'query_one', return_value=mock_input):
+            # Mock button press event for rename
+            mock_button = MagicMock()
+            mock_button.id = "rename"
+            mock_event = MagicMock()
+            mock_event.button = mock_button
+            
+            with patch.object(screen, 'dismiss') as mock_dismiss:
+                screen.on_button_pressed(mock_event)
+                mock_dismiss.assert_called_once_with(None)
 
 
 if __name__ == "__main__":
