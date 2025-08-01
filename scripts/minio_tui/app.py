@@ -1,6 +1,8 @@
+from functools import partial
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.widgets import Header, Footer, DataTable, Input, Static, Button
+from textual.widgets import Header, Footer, DataTable, Input, Static, Button, Tree
+from textual.widgets.tree import TreeNode
 from textual.widgets.data_table import RowDoesNotExist
 from textual.screen import ModalScreen
 from .minio_client import MinioClient
@@ -114,55 +116,115 @@ class MinioTUI(App):
                 yield DataTable(id="buckets_table", cursor_type="row")
                 yield Static(id="bucket_status", classes="status-bar")
             with Vertical(id="objects_panel"):
-                yield DataTable(id="objects_table", cursor_type="row")
+                yield Tree(id="objects_tree", label="Select a bucket")
                 yield Static(id="object_status", classes="status-bar")
         yield Footer()
 
     def on_mount(self) -> None:
-        self.show_buckets()
         self.query_one("#buckets_table").focus()
+        self.run_worker(self.load_buckets_and_counts, thread=True)
 
-    def show_buckets(self):
-        buckets_table = self.query_one("#buckets_table")
-        buckets_table.clear(columns=True)
-        buckets_table.add_columns("Buckets")
-        self.query_one("#bucket_status").update("")  # Clear status
+    def load_buckets_and_counts(self):
+        """
+        Worker to fetch all buckets and the number of objects in each.
+        """
         try:
             buckets = self.minio_client.list_buckets()
-            rows = [[bucket] for bucket in buckets]
-            if rows:
-                buckets_table.add_rows(rows)
-            self.query_one("#bucket_status").update(f"{len(buckets)} buckets found.")
+            bucket_data = []
+            for bucket_name in buckets:
+                objects = self.minio_client.list_objects(bucket_name)
+                bucket_data.append((bucket_name, len(objects)))
+            self.call_from_thread(self.update_bucket_table, bucket_data)
         except Exception as e:
-            self.set_status(f"Error: {e}")
+            # Post error to the correct status bar
+            self.call_from_thread(self.query_one("#bucket_status").update, f"Error: {e}")
 
-    def on_data_table_row_selected(self, event: DataTable.RowSelected):
+    def update_bucket_table(self, bucket_data: list[tuple[str, int]]):
+        """
+        Update the bucket table with names and object counts.
+        """
+        buckets_table = self.query_one("#buckets_table")
+        buckets_table.clear(columns=True)
+        buckets_table.add_columns("Name", "Object Count")
+        
+        rows = [
+            [name, str(count)] for name, count in bucket_data
+        ]
+        
+        if rows:
+            buckets_table.add_rows(rows)
+            # --- FIX: Automatically load the first bucket's objects ---
+            first_bucket_name = rows[0][0]
+            self.show_objects(first_bucket_name)
+            self.current_bucket = first_bucket_name
+
+        self.query_one("#bucket_status").update(f"{len(bucket_data)} buckets found.")
+
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted):
+        """
+        Handles the event when a user highlights a bucket with the cursor.
+        """
         if event.control.id == "buckets_table":
             try:
-                self.current_bucket = event.data_table.get_row(event.cursor_row)[0]
-                self.show_objects(self.current_bucket)
-                self.query_one("#objects_table").focus()
-            except RowDoesNotExist:
+                bucket_name = event.data_table.get_row_at(event.cursor_row)[0]
+                # Avoid reloading if the same bucket is highlighted
+                if bucket_name != self.current_bucket:
+                    self.current_bucket = bucket_name
+                    self.show_objects(bucket_name)
+            except (IndexError, RowDoesNotExist):
                 self.current_bucket = None
-                self.clear_objects_table()
+                self.clear_objects_tree()
 
     def show_objects(self, bucket_name: str):
-        objects_table = self.query_one("#objects_table")
-        objects_table.clear(columns=True)
-        objects_table.add_columns(f"Objects in '{bucket_name}'")
-        self.query_one("#object_status").update("")  # Clear status
+        tree = self.query_one("#objects_tree")
+        tree.label = bucket_name
+        tree.reset(bucket_name)
+        
+        self.query_one("#object_status").update("Loading...")
+        # Use functools.partial to create a worker with the argument pre-filled
+        worker = partial(self.load_objects, bucket_name)
+        self.run_worker(worker, thread=True)
+
+    def load_objects(self, bucket_name: str):
+        """Worker to load objects for a given bucket."""
         try:
             objects = self.minio_client.list_objects(bucket_name)
-            rows = [[obj] for obj in objects]
-            if rows:
-                objects_table.add_rows(rows)
-            self.query_one("#object_status").update(f"{len(objects)} objects found.")
+            self.call_from_thread(self.update_object_tree, objects)
         except Exception as e:
-            self.set_status(f"Error: {e}")
+            self.call_from_thread(self.set_status, f"Error: {e}")
 
-    def clear_objects_table(self):
-        objects_table = self.query_one("#objects_table")
-        objects_table.clear(columns=True)
+    def update_object_tree(self, objects: list[str]):
+        tree = self.query_one("#objects_tree")
+        nodes = {"": tree.root}
+
+        for obj_path in sorted(objects):
+            if not obj_path:
+                continue
+
+            parent_path = ""
+            path_parts = [part for part in obj_path.split('/') if part]
+
+            for i, part in enumerate(path_parts):
+                current_path = "/".join(path_parts[:i + 1])
+                
+                if current_path not in nodes:
+                    parent_node = nodes.get(parent_path, tree.root)
+                    
+                    is_file = (i == len(path_parts) - 1) and not obj_path.endswith('/')
+                    
+                    new_node = parent_node.add(
+                        part,
+                        data=obj_path if is_file else None
+                    )
+                    nodes[current_path] = new_node
+                
+                parent_path = current_path
+
+        tree.root.expand()
+        self.query_one("#object_status").update(f"{len(objects)} objects found.")
+
+    def clear_objects_tree(self):
+        self.query_one("#objects_tree").clear()
         self.query_one("#object_status").update("")
 
     def set_status(self, message: str):
@@ -173,37 +235,44 @@ class MinioTUI(App):
             if bucket_name:
                 try:
                     self.minio_client.create_bucket(bucket_name)
-                    self.set_status(f"Bucket '{bucket_name}' created.")
-                    self.show_buckets()
+                    self.query_one("#bucket_status").update(f"Bucket '{bucket_name}' created.")
+                    # Refresh the bucket list
+                    self.run_worker(self.load_buckets_and_counts, thread=True)
                 except Exception as e:
                     self.set_status(f"Error: {e}")
         self.push_screen(CreateBucketScreen(), on_submit)
 
     def action_delete_item(self):
-        focused_table = self.focused
-        if not isinstance(focused_table, DataTable):
-            return
-
-        try:
-            item_name = focused_table.get_row_at(focused_table.cursor_row)[0]
-        except RowDoesNotExist:
-            return
-
-        def on_confirm(confirmed: bool):
-            if confirmed:
-                try:
-                    if focused_table.id == "buckets_table":
-                        self.minio_client.delete_bucket(item_name)
-                        self.set_status(f"Bucket '{item_name}' deleted.")
-                        self.show_buckets()
-                        self.clear_objects_table()
-                    elif focused_table.id == "objects_table":
-                        self.minio_client.delete_object(self.current_bucket, item_name)
-                        self.set_status(f"Object '{item_name}' deleted.")
-                        self.show_objects(self.current_bucket)
-                except Exception as e:
-                    self.set_status(f"Error: {e}")
-        self.push_screen(ConfirmDeleteScreen(item_name), on_confirm)
+        focused = self.focused
+        if isinstance(focused, DataTable):
+            try:
+                item_name = focused.get_row_at(focused.cursor_row)[0]
+                def on_confirm_bucket(confirmed: bool):
+                    if confirmed:
+                        try:
+                            self.minio_client.delete_bucket(item_name)
+                            self.query_one("#bucket_status").update(f"Bucket '{item_name}' deleted.")
+                            self.clear_objects_tree()
+                            # Refresh the bucket list
+                            self.run_worker(self.load_buckets_and_counts, thread=True)
+                        except Exception as e:
+                            self.set_status(f"Error: {e}")
+                self.push_screen(ConfirmDeleteScreen(item_name), on_confirm_bucket)
+            except (RowDoesNotExist, IndexError):
+                return
+        elif isinstance(focused, Tree):
+            node = focused.cursor_node
+            if node and node.data:
+                item_name = node.data
+                def on_confirm_object(confirmed: bool):
+                    if confirmed:
+                        try:
+                            self.minio_client.delete_object(self.current_bucket, item_name)
+                            self.set_status(f"Object '{item_name}' deleted.")
+                            self.show_objects(self.current_bucket)
+                        except Exception as e:
+                            self.set_status(f"Error: {e}")
+                self.push_screen(ConfirmDeleteScreen(item_name), on_confirm_object)
 
     def action_upload_file(self):
         if not self.current_bucket:
@@ -223,13 +292,13 @@ class MinioTUI(App):
         self.push_screen(UploadFileScreen(), on_submit)
 
     def action_download_file(self):
-        if self.focused.id != "objects_table" or not self.current_bucket:
+        if self.focused.id != "objects_tree" or not self.current_bucket:
             self.set_status("Select an object to download.")
             return
-        try:
-            object_name = self.focused.get_row_at(self.focused.cursor_row)[0]
-        except RowDoesNotExist:
+        node = self.query_one("#objects_tree").cursor_node
+        if not node or not node.data:
             return
+        object_name = node.data
         def on_submit(file_path: str):
             if file_path:
                 try:
@@ -240,17 +309,19 @@ class MinioTUI(App):
         self.push_screen(DownloadFileScreen(), on_submit)
 
     def action_presign_url(self):
-        if self.focused.id != "objects_table" or not self.current_bucket:
+        if self.focused.id != "objects_tree" or not self.current_bucket:
             self.set_status("Select an object to get a URL.")
             return
+        node = self.query_one("#objects_tree").cursor_node
+        if not node or not node.data:
+            return
         try:
-            object_name = self.focused.get_row_at(self.focused.cursor_row)[0]
+            object_name = node.data
             url = self.minio_client.generate_presigned_url(self.current_bucket, object_name)
             self.push_screen(ShowURLScreen(url))
-        except RowDoesNotExist:
-            return
         except Exception as e:
             self.set_status(f"Error: {e}")
 
 if __name__ == "__main__":
     pass
+

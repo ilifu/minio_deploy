@@ -11,7 +11,7 @@
     width: 70%;
 }
 
-#buckets_table, #objects_table {
+#buckets_table, #objects_tree {
     height: 1fr;
 }
 
