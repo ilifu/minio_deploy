@@ -75,6 +75,26 @@ class ConfirmDeleteScreen(ModalScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss(event.button.id == "delete")
 
+class PresignURLScreen(ModalScreen):
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-container"):
+            yield Static("Generate Presigned URL", classes="modal-title")
+            yield Input(placeholder="Expiration time in minutes (default: 15)", id="expiry_input", value="15")
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Generate", variant="primary", id="generate")
+                yield Button("Cancel", id="cancel")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "generate":
+            expiry_str = self.query_one("#expiry_input").value
+            try:
+                expiry_minutes = int(expiry_str) if expiry_str else 15
+                self.dismiss(expiry_minutes)
+            except ValueError:
+                self.dismiss(15)  # Default to 15 minutes if invalid input
+        else:
+            self.dismiss(None)
+
 class ShowURLScreen(ModalScreen):
     def __init__(self, url: str, **kwargs):
         super().__init__(**kwargs)
@@ -83,8 +103,15 @@ class ShowURLScreen(ModalScreen):
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-container"):
             yield Static("Presigned URL", classes="modal-title")
-            yield Static(self.url, classes="url-display")
+            yield Input(value=self.url, id="url_input")
+            yield Static("Select all text (Ctrl+A) and copy (Ctrl+C)", classes="help-text")
             yield Button("Close", id="close")
+
+    def on_mount(self) -> None:
+        # Focus the input and select all text
+        url_input = self.query_one("#url_input")
+        url_input.focus()
+        url_input.select_all()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss()
@@ -345,12 +372,20 @@ class MinioTUI(App):
         node = self.query_one("#objects_tree").cursor_node
         if not node or not node.data:
             return
-        try:
-            object_name = node.data
-            url = self.minio_client.generate_presigned_url(self.current_bucket, object_name)
-            self.push_screen(ShowURLScreen(url))
-        except Exception as e:
-            self.set_status(f"Error: {e}")
+        
+        object_name = node.data
+        
+        def on_expiry_submit(expiry_minutes):
+            if expiry_minutes is not None:
+                try:
+                    # Convert minutes to seconds for the API
+                    expiry_seconds = expiry_minutes * 60
+                    url = self.minio_client.generate_presigned_url(self.current_bucket, object_name, expires_in=expiry_seconds)
+                    self.push_screen(ShowURLScreen(url))
+                except Exception as e:
+                    self.set_status(f"Error: {e}")
+        
+        self.push_screen(PresignURLScreen(), on_expiry_submit)
 
 if __name__ == "__main__":
     pass
