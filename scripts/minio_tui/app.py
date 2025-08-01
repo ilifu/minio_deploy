@@ -200,6 +200,8 @@ class MinioTUI(App):
         super().__init__(**kwargs)
         self.minio_client = minio_client
         self.current_bucket = None
+        self.all_objects = []  # Store all objects for filtering
+        self.search_filter = ""  # Current search filter
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -208,6 +210,7 @@ class MinioTUI(App):
                 yield DataTable(id="buckets_table", cursor_type="row")
                 yield Static(id="bucket_status", classes="status-bar")
             with Vertical(id="objects_panel"):
+                yield Input(placeholder="Search objects...", id="search_input")
                 yield Tree(id="objects_tree", label="Select a bucket")
                 yield Static(id="object_status", classes="status-bar")
         yield Footer()
@@ -222,6 +225,13 @@ class MinioTUI(App):
         # Force footer to refresh to show current context bindings
         footer = self.query_one(Footer)
         footer.refresh()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Handle search input changes."""
+        if event.input.id == "search_input":
+            self.search_filter = event.value.lower()
+            if self.all_objects and self.current_bucket:
+                self.update_object_tree(self.all_objects)
 
     def check_action(self, action: str, parameters) -> bool | None:
         """Control which actions are available based on current focus."""
@@ -239,6 +249,9 @@ class MinioTUI(App):
         elif focused and focused.id == "objects_tree":
             # Object context actions
             allowed_actions = {"upload_file", "download_file", "presign_url", "show_metadata", "delete_item"}
+        elif focused and focused.id == "search_input":
+            # Search input context - allow upload but not object-specific actions
+            allowed_actions = {"upload_file"}
         else:
             # Default: allow all actions
             return True
@@ -310,15 +323,27 @@ class MinioTUI(App):
         """Worker to load objects for a given bucket."""
         try:
             objects = self.minio_client.list_objects(bucket_name)
-            self.call_from_thread(self.update_object_tree, objects)
+            self.call_from_thread(self.store_and_update_objects, objects)
         except Exception as e:
             self.call_from_thread(self.set_status, f"Error: {e}")
 
+    def store_and_update_objects(self, objects: list[str]):
+        """Store all objects and update the tree view."""
+        self.all_objects = objects
+        self.update_object_tree(objects)
+
     def update_object_tree(self, objects: list[str]):
         tree = self.query_one("#objects_tree")
+        tree.clear()
         nodes = {"": tree.root}
 
-        for obj_path in sorted(objects):
+        # Filter objects based on search filter
+        if self.search_filter:
+            filtered_objects = [obj for obj in objects if self.search_filter in obj.lower()]
+        else:
+            filtered_objects = objects
+
+        for obj_path in sorted(filtered_objects):
             if not obj_path:
                 continue
 
@@ -342,11 +367,21 @@ class MinioTUI(App):
                 parent_path = current_path
 
         tree.root.expand()
-        self.query_one("#object_status").update(f"{len(objects)} objects found.")
+        
+        # Update status message
+        if self.search_filter:
+            total_objects = len(self.all_objects) if self.all_objects else len(objects)
+            filtered_count = len(filtered_objects)
+            self.query_one("#object_status").update(f"{filtered_count}/{total_objects} objects (filtered)")
+        else:
+            self.query_one("#object_status").update(f"{len(filtered_objects)} objects found.")
 
     def clear_objects_tree(self):
         self.query_one("#objects_tree").clear()
         self.query_one("#object_status").update("")
+        self.query_one("#search_input").value = ""
+        self.all_objects = []
+        self.search_filter = ""
 
     def set_status(self, message: str):
         self.query_one("#object_status").update(message)

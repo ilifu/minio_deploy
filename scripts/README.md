@@ -86,6 +86,7 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 - **Bucket Management**: Create and delete buckets
 - **Object Operations**: Upload, download, and delete objects
 - **Object Metadata**: View file sizes, modification dates, and content types
+- **Search & Filter**: Real-time search filtering of objects by name
 - **Presigned URLs**: Generate time-limited URLs (configurable expiration, default 15 minutes) 
 - **Smart File Types**: Automatic content type detection based on file extensions
 - **Context Menus**: Different keybindings available based on current focus

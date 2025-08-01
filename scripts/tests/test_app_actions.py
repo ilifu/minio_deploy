@@ -135,7 +135,7 @@ class TestMinioTUIActions(unittest.TestCase):
             # Verify call_from_thread was called with objects
             mock_call_from_thread.assert_called_once()
             call_args = mock_call_from_thread.call_args
-            self.assertEqual(call_args[0][0].__name__, "update_object_tree")
+            self.assertEqual(call_args[0][0].__name__, "store_and_update_objects")
             self.assertEqual(call_args[0][1], objects)
 
     def test_load_objects_error(self):
@@ -154,6 +154,60 @@ class TestMinioTUIActions(unittest.TestCase):
             call_args = mock_call_from_thread.call_args
             self.assertEqual(call_args[0][0].__name__, "set_status")
             self.assertIn("Error:", call_args[0][1])
+
+    def test_search_filter_functionality(self):
+        """Test that search filtering works correctly."""
+        # Setup initial objects
+        objects = ["file1.txt", "folder/file2.txt", "documents/report.pdf", "images/photo.jpg"]
+        self.app.all_objects = objects
+        self.app.current_bucket = "test-bucket"
+        
+        # Mock the tree and status widgets
+        mock_tree = MagicMock()
+        mock_status = MagicMock()
+        
+        with patch.object(self.app, 'query_one') as mock_query_one:
+            mock_query_one.side_effect = lambda selector: {
+                "#objects_tree": mock_tree,
+                "#object_status": mock_status
+            }[selector]
+            
+            # Test filtering for "file"
+            self.app.search_filter = "file"
+            self.app.update_object_tree(objects)
+            
+            # Verify status shows filtered count
+            mock_status.update.assert_called_with("2/4 objects (filtered)")
+            
+            # Test no filter
+            self.app.search_filter = ""
+            self.app.update_object_tree(objects)
+            
+            # Verify status shows all objects
+            mock_status.update.assert_called_with("4 objects found.")
+
+    def test_search_input_changed(self):
+        """Test that search input changes trigger filtering."""
+        # Mock input event
+        mock_input = MagicMock()
+        mock_input.id = "search_input"
+        mock_input.value = "test"
+        
+        # Setup objects
+        self.app.all_objects = ["test1.txt", "file.txt", "test2.jpg"]
+        self.app.current_bucket = "bucket"
+        
+        with patch.object(self.app, 'update_object_tree') as mock_update:
+            # Create mock event
+            from textual.widgets import Input
+            event = Input.Changed(mock_input, mock_input.value)
+            
+            # Call the handler
+            self.app.on_input_changed(event)
+            
+            # Verify filter was set and tree updated
+            self.assertEqual(self.app.search_filter, "test")
+            mock_update.assert_called_once_with(self.app.all_objects)
 
 
 if __name__ == "__main__":
