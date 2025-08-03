@@ -381,6 +381,32 @@ class ObjectLockInfoScreen(ModalScreen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss()
 
+class FilePreviewScreen(ModalScreen):
+    def __init__(self, object_name: str, content: str, **kwargs):
+        super().__init__(**kwargs)
+        self.object_name = object_name
+        self.content = content
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-container"):
+            yield Static(f"File Preview: {self.object_name}", classes="modal-title")
+            
+            # Content preview with scrollable text
+            from textual.widgets import TextArea
+            content_widget = TextArea(
+                self.content,
+                read_only=True,
+                id="preview_content"
+            )
+            content_widget.cursor_blink = False
+            yield content_widget
+            
+            yield Static(f"Size: {len(self.content.encode('utf-8'))} bytes | Lines: {self.content.count(chr(10)) + 1}", classes="help-text")
+            yield Button("Close", id="close")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss()
+
 
 # --- Main App ---
 
@@ -483,6 +509,7 @@ class MinioTUI(App):
         ("l", "download_file", "Download"),
         ("p", "presign_url", "Get URL"),
         ("m", "show_metadata", "Metadata"),
+        ("v", "preview_file", "Preview"),
         ("r", "rename_item", "Rename"),
         ("o", "object_lock_info", "Lock Info"),
         ("t", "set_retention", "Set Retention"),
@@ -543,7 +570,7 @@ class MinioTUI(App):
             allowed_actions = {"create_bucket", "delete_item"}
         elif focused and focused.id == "objects_tree":
             # Object context actions
-            allowed_actions = {"create_directory", "upload_file", "download_file", "presign_url", "show_metadata", "rename_item", "object_lock_info", "set_retention", "toggle_legal_hold", "delete_item"}
+            allowed_actions = {"create_directory", "upload_file", "download_file", "presign_url", "show_metadata", "preview_file", "rename_item", "object_lock_info", "set_retention", "toggle_legal_hold", "delete_item"}
         elif focused and focused.id == "search_input":
             # Search input context - allow upload and directory creation
             allowed_actions = {"create_directory", "upload_file"}
@@ -910,6 +937,65 @@ class MinioTUI(App):
     def show_metadata_modal(self, object_name: str, metadata: dict):
         """Show the metadata modal with the fetched data."""
         self.push_screen(MetadataScreen(object_name, metadata))
+
+    def action_preview_file(self):
+        """Preview the content of the selected file."""
+        if self.focused.id != "objects_tree" or not self.current_bucket:
+            self.set_status("Select a file to preview.")
+            return
+        
+        node = self.query_one("#objects_tree").cursor_node
+        if not node or not node.data:
+            self.set_status("Select a file to preview.")
+            return
+        
+        object_name = node.data
+        
+        # Check if it's a directory
+        if object_name.endswith('/'):
+            self.set_status("Cannot preview directories.")
+            return
+        
+        # Check if file type is suitable for text preview
+        if not self.is_text_file(object_name):
+            self.set_status("File type not suitable for text preview.")
+            return
+        
+        # Run content fetch in a worker thread
+        def fetch_content():
+            try:
+                content = self.minio_client.get_object_content(self.current_bucket, object_name)
+                self.call_from_thread(self.show_preview_modal, object_name, content)
+            except Exception as e:
+                self.call_from_thread(self.set_status, f"Error fetching file content: {e}")
+        
+        self.run_worker(fetch_content, thread=True)
+        self.set_status("Loading file preview...")
+
+    def is_text_file(self, filename: str) -> bool:
+        """Check if a file is likely to be a text file based on its extension."""
+        if not filename:
+            return False
+            
+        # Get the file extension (case insensitive)
+        ext = filename.lower().split('.')[-1] if '.' in filename else ''
+        
+        # Common text file extensions
+        text_extensions = {
+            'txt', 'md', 'markdown', 'rst', 'log', 'cfg', 'conf', 'config', 'ini',
+            'json', 'xml', 'yaml', 'yml', 'toml', 'csv', 'tsv',
+            'py', 'js', 'ts', 'html', 'htm', 'css', 'scss', 'sass', 'less',
+            'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'php', 'rb', 'go', 'rs',
+            'sh', 'bash', 'zsh', 'fish', 'ps1', 'bat', 'cmd',
+            'sql', 'gitignore', 'env', 'dockerfile', 'makefile',
+            'readme', 'license', 'changelog', 'authors', 'contributors'
+        }
+        
+        return ext in text_extensions or not ext  # Files without extension might be text
+
+    def show_preview_modal(self, object_name: str, content: str):
+        """Show the file preview modal with the fetched content."""
+        self.push_screen(FilePreviewScreen(object_name, content))
 
     def action_rename_item(self):
         """Rename the selected object (buckets cannot be renamed in S3/MinIO)."""

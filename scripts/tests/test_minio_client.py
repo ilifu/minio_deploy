@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import sys
 from pathlib import Path
 
@@ -299,6 +299,60 @@ class TestMinioClient(unittest.TestCase):
             Key="my-object"
         )
         self.assertEqual(result['Status'], 'ON')
+
+    def test_get_object_content_success(self):
+        """Tests that get_object_content fetches and decodes text content."""
+        # Mock get_object_metadata to return small file size
+        with patch.object(self.minio_client, 'get_object_metadata') as mock_metadata:
+            mock_metadata.return_value = {'size': 100}
+            
+            # Mock the get_object call
+            mock_body = MagicMock()
+            mock_body.read.return_value = b"Hello, World!\nThis is test content."
+            self.mock_boto3_client.get_object.return_value = {
+                'Body': mock_body
+            }
+            
+            content = self.minio_client.get_object_content("my-bucket", "test.txt")
+            
+            # Verify get_object was called
+            self.mock_boto3_client.get_object.assert_called_once_with(
+                Bucket="my-bucket",
+                Key="test.txt"
+            )
+            
+            # Verify content is decoded correctly
+            self.assertEqual(content, "Hello, World!\nThis is test content.")
+
+    def test_get_object_content_too_large(self):
+        """Tests that get_object_content rejects files that are too large."""
+        # Mock get_object_metadata to return large file size
+        with patch.object(self.minio_client, 'get_object_metadata') as mock_metadata:
+            mock_metadata.return_value = {'size': 50 * 1024}  # 50KB
+            
+            with self.assertRaises(Exception) as context:
+                self.minio_client.get_object_content("my-bucket", "large-file.txt")
+            
+            self.assertIn("too large for preview", str(context.exception))
+
+    def test_get_object_content_binary_file(self):
+        """Tests that get_object_content rejects binary content."""
+        # Mock get_object_metadata to return small file size
+        with patch.object(self.minio_client, 'get_object_metadata') as mock_metadata:
+            mock_metadata.return_value = {'size': 100}
+            
+            # Mock the get_object call with binary content containing null bytes
+            mock_body = MagicMock()
+            # Use content with null bytes (common binary indicator)
+            mock_body.read.return_value = b"Some text\x00with null bytes\x00"
+            self.mock_boto3_client.get_object.return_value = {
+                'Body': mock_body
+            }
+            
+            with self.assertRaises(Exception) as context:
+                self.minio_client.get_object_content("my-bucket", "binary.dat")
+            
+            self.assertIn("binary data", str(context.exception))
 
 if __name__ == "__main__":
     unittest.main()

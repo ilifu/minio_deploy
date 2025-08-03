@@ -7,7 +7,7 @@ from pathlib import Path
 scripts_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(scripts_dir))
 
-from minio_tui.app import MinioTUI, CreateBucketScreen, UploadFileScreen, DownloadFileScreen, ConfirmDeleteScreen, ShowURLScreen, PresignURLScreen, RenameObjectScreen, CreateDirectoryScreen
+from minio_tui.app import MinioTUI, CreateBucketScreen, UploadFileScreen, DownloadFileScreen, ConfirmDeleteScreen, ShowURLScreen, PresignURLScreen, RenameObjectScreen, CreateDirectoryScreen, FilePreviewScreen
 from minio_tui.minio_client import MinioClient
 
 
@@ -361,6 +361,43 @@ class TestModalScreens(unittest.TestCase):
             with patch.object(screen, 'dismiss') as mock_dismiss:
                 screen.on_button_pressed(mock_event)
                 mock_dismiss.assert_called_once_with(None)
+
+    def test_file_preview_screen(self):
+        """Test FilePreviewScreen displays content correctly."""
+        test_content = "Hello, World!\nThis is a test file.\nLine 3"
+        screen = FilePreviewScreen("test.txt", test_content)
+        
+        # Test that the screen initializes with correct content
+        self.assertEqual(screen.object_name, "test.txt")
+        self.assertEqual(screen.content, test_content)
+        
+        # Mock button press event for close
+        mock_button = MagicMock()
+        mock_button.id = "close"
+        mock_event = MagicMock()
+        mock_event.button = mock_button
+        
+        with patch.object(screen, 'dismiss') as mock_dismiss:
+            screen.on_button_pressed(mock_event)
+            mock_dismiss.assert_called_once()
+
+    def test_is_text_file_detection(self):
+        """Test text file detection logic."""
+        app = MinioTUI(MagicMock())
+        
+        # Test common text file extensions
+        self.assertTrue(app.is_text_file("test.txt"))
+        self.assertTrue(app.is_text_file("script.py"))
+        self.assertTrue(app.is_text_file("config.json"))
+        self.assertTrue(app.is_text_file("README.md"))
+        self.assertTrue(app.is_text_file("styles.css"))
+        self.assertTrue(app.is_text_file("Dockerfile"))  # No extension
+        
+        # Test binary file extensions
+        self.assertFalse(app.is_text_file("image.png"))
+        self.assertFalse(app.is_text_file("video.mp4"))
+        self.assertFalse(app.is_text_file("archive.zip"))
+        self.assertFalse(app.is_text_file("binary.exe"))
 
 
 if __name__ == "__main__":

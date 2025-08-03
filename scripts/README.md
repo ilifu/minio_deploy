@@ -78,6 +78,7 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 - `l` - Download selected object
 - `p` - Generate presigned URL for selected object
 - `m` - View object metadata
+- `v` - Preview text files (small files only)
 - `r` - Rename selected object
 - `o` - View Object Lock information
 - `t` - Set retention period (Object Lock)
@@ -98,6 +99,7 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 - **Presigned URLs**: Generate time-limited URLs (configurable expiration, default 15 minutes) 
 - **Smart File Types**: Automatic content type detection based on file extensions
 - **File Type Icons**: Visual file type indicators with support for 40+ file types (🐍 Python, 🖼️ Images, 📄 Documents, etc.)
+- **File Preview**: Quick preview of small text files (≤10KB) with syntax-aware detection
 - **Context Menus**: Different keybindings available based on current focus
 - **Real-time Updates**: Object counts and listings update automatically
 

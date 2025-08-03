@@ -238,3 +238,80 @@ class MinioClient:
         except Exception:
             # Object may not have legal hold set
             return {}
+
+    def get_object_content(self, bucket_name, object_name, max_size=10 * 1024):
+        """Get object content for preview (limited to max_size bytes)."""
+        try:
+            # Get object metadata first to check size
+            metadata = self.get_object_metadata(bucket_name, object_name)
+            file_size = metadata.get('size', 0)
+            
+            # Limit preview to max_size bytes (default 10KB)
+            if file_size > max_size:
+                raise Exception(f"File too large for preview ({format_size(file_size)}). Maximum preview size is {format_size(max_size)}")
+            
+            # Download the object content
+            response = self.client.get_object(
+                Bucket=bucket_name,
+                Key=object_name
+            )
+            
+            # Read the content
+            content = response['Body'].read()
+            
+            # Try to decode as text
+            try:
+                # Try UTF-8 first
+                text_content = content.decode('utf-8')
+                # Check for common binary indicators even if it decodes
+                if self._contains_binary_indicators(content):
+                    raise Exception("File contains binary data and cannot be previewed as text")
+                return text_content
+            except UnicodeDecodeError:
+                try:
+                    # Try latin-1 as fallback
+                    text_content = content.decode('latin-1')
+                    # Check for common binary indicators
+                    if self._contains_binary_indicators(content):
+                        raise Exception("File contains binary data and cannot be previewed as text")
+                    return text_content
+                except UnicodeDecodeError:
+                    raise Exception("File contains binary data and cannot be previewed as text")
+                    
+        except Exception as e:
+            raise Exception(f"Failed to get object content: {str(e)}")
+
+    def _contains_binary_indicators(self, content: bytes) -> bool:
+        """Check if content contains common binary file indicators."""
+        # Check for null bytes (common in binary files)
+        if b'\x00' in content:
+            return True
+        
+        # Check for high percentage of non-printable characters
+        printable_chars = 0
+        for byte in content:
+            # Count ASCII printable characters, tabs, newlines, carriage returns
+            if (32 <= byte <= 126) or byte in [9, 10, 13]:
+                printable_chars += 1
+        
+        # If less than 80% are printable, consider it binary
+        if len(content) > 0 and (printable_chars / len(content)) < 0.8:
+            return True
+            
+        return False
+
+def format_size(size_bytes):
+    """Format file size in human readable format."""
+    if size_bytes == 0:
+        return "0 B"
+    
+    size_names = ["B", "KB", "MB", "GB", "TB"]
+    i = 0
+    while size_bytes >= 1024 and i < len(size_names) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    
+    if i == 0:
+        return f"{int(size_bytes)} {size_names[i]}"
+    else:
+        return f"{size_bytes:.1f} {size_names[i]}"
