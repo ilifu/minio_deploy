@@ -45,6 +45,7 @@
 - Create buckets with optional Object Lock (WORM compliance)
 - Delete buckets (with confirmation)
 - View bucket contents with object counts
+- View bucket properties (policies, lifecycle, versioning, CORS)
 
 **Object Operations:**
 - Upload files with smart path prepopulation and progress bars
@@ -92,7 +93,7 @@
 - [ ] **Bulk operations** - Multi-select for batch operations
 - [ ] **Object versioning** - Support for S3 versioning features
 - [x] **Upload presigned URLs** - Generate URLs for client-side uploads
-- [ ] **Bucket properties** - View bucket policies, CORS, lifecycle rules
+- [🔄] **Bucket properties** - View bucket policies, CORS, lifecycle rules (IN PROGRESS)
 
 ### Low Priority
 - [ ] **Sortable columns** - Sortable object lists by name, size, date
@@ -120,5 +121,59 @@
 - ✅ **Configuration Simplification** - Removed Dynaconf, added simple TOML support
 - ✅ **Enhanced UI** - Large preview modals, better user experience
 - ✅ **Tree-sitter Integration** - Professional syntax highlighting support
+
+## 🔄 Currently In Development
+
+### Bucket Properties Feature
+**Status:** In Progress | **Priority:** Medium | **Target:** Phase 5 Enhancement
+
+**Overview:** Adding comprehensive bucket property inspection capabilities to provide administrators with detailed visibility into bucket configurations and policies.
+
+**Planned Features:**
+- **General Tab:** Bucket creation date, object count, total size, Object Lock status
+- **Policy Tab:** JSON bucket policy display with syntax highlighting
+- **Lifecycle Tab:** Formatted lifecycle rules (transition, expiration, versioning)
+- **Versioning Tab:** Current versioning status with enable/suspend options
+- **CORS Tab:** Cross-origin resource sharing configuration (Enterprise MinIO only)
+
+**Technical Implementation:**
+- New `BucketPropertiesScreen` modal with tabbed interface
+- Extended `MinioClient` with property retrieval methods:
+  - `get_bucket_properties()` - general bucket information
+  - `get_bucket_policy()` - bucket policy JSON
+  - `get_bucket_lifecycle()` - lifecycle configuration
+  - `get_bucket_versioning()` - versioning status
+  - `get_bucket_cors()` - CORS configuration (with graceful fallback)
+- New keybinding (likely 'i' for info/inspect) from bucket context
+- Comprehensive error handling for unsupported features
+- Test coverage for all new property methods
+
+**MinIO Compatibility Research:**
+- ✅ **Versioning:** Full S3-compatible support
+- ✅ **Lifecycle:** Object transition, expiration, tiering supported  
+- ✅ **Bucket Policies:** S3-compatible JSON policies supported
+- ⚠️ **CORS:** Only available in MinIO Enterprise (paid version)
+
+**UI Design:**
+```
+┌─────────── Bucket Properties: bucket-name ───────────┐
+│ [General] [Policy] [Lifecycle] [Versioning] [CORS]   │
+│ ┌─────────────────────────────────────────────────┐   │
+│ │ Tab-specific content with syntax highlighting   │   │
+│ │ for JSON/XML, formatted tables for rules,      │   │
+│ │ and clear status indicators                     │   │
+│ └─────────────────────────────────────────────────┘   │
+│                                      [Close]          │
+└───────────────────────────────────────────────────────┘
+```
+
+**Development Progress:**
+- [x] Research S3/MinIO bucket property APIs and compatibility
+- [x] Design bucket properties modal UI layout  
+- [ ] Implement bucket property retrieval methods in MinioClient
+- [ ] Create BucketPropertiesScreen modal with tabbed interface
+- [ ] Add keybinding and action integration
+- [ ] Write comprehensive tests for new functionality
+- [ ] Update documentation and help text
 
 The MinIO TUI has evolved into a feature-rich, professional-grade S3-compatible object storage management tool with enterprise features, advanced UI/UX, modern code preview capabilities, and comprehensive test coverage. The project has significantly exceeded its original scope while maintaining excellent code quality and user experience.
