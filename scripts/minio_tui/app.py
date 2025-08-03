@@ -164,19 +164,46 @@ class ConfirmDeleteScreen(ModalScreen):
         self.dismiss(event.button.id == "delete")
 
 class PresignURLScreen(ModalScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.time_unit = "minutes"  # Default time unit
+
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-container"):
             yield Static("Generate Presigned URL", classes="modal-title")
-            yield Input(placeholder="Expiration time in minutes (default: 15)", id="expiry_input", value="15")
+            yield Input(placeholder="Expiration time (default: 15)", id="expiry_input", value="15")
+            
+            yield Static("Time Unit:", classes="help-text")
+            with Horizontal():
+                yield Button("Minutes", variant="primary", id="minutes")
+                yield Button("Hours", id="hours")
+                yield Button("Days", id="days")
+
             with Horizontal(classes="modal-buttons"):
                 yield Button("Generate", variant="primary", id="generate")
                 yield Button("Cancel", id="cancel")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "generate":
+        if event.button.id in ["minutes", "hours", "days"]:
+            self.time_unit = event.button.id
+            # Update button variants to show selection
+            for button in self.query("Button"):
+                if button.id in ["minutes", "hours", "days"]:
+                    button.variant = "primary" if button.id == self.time_unit else "default"
+
+        elif event.button.id == "generate":
             expiry_str = self.query_one("#expiry_input").value
             try:
-                expiry_minutes = int(expiry_str) if expiry_str else 15
+                expiry_value = int(expiry_str) if expiry_str else 15
+                
+                # Calculate expiry in minutes based on selected unit
+                if self.time_unit == "hours":
+                    expiry_minutes = expiry_value * 60
+                elif self.time_unit == "days":
+                    expiry_minutes = expiry_value * 60 * 24
+                else: # minutes
+                    expiry_minutes = expiry_value
+                    
                 self.dismiss(expiry_minutes)
             except ValueError:
                 self.dismiss(15)  # Default to 15 minutes if invalid input
@@ -203,6 +230,85 @@ class ShowURLScreen(ModalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss()
+
+
+class UploadPresignURLScreen(ModalScreen):
+    def __init__(self, current_path=""):
+        super().__init__()
+        self.current_path = current_path
+        self.time_unit = "minutes"
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-container"):
+            yield Static("Generate Upload URL", classes="modal-title")
+            yield Input(
+                placeholder="Object name/path",
+                id="object_name",
+                value=self.current_path
+            )
+            yield Input(
+                placeholder="Content type (optional, e.g., image/jpeg)",
+                id="content_type"
+            )
+            yield Input(
+                placeholder="Expiration time (default: 15)",
+                id="expiry_input",
+                value="15"
+            )
+            
+            yield Static("Time Unit:", classes="help-text")
+            with Horizontal():
+                yield Button("Minutes", variant="primary", id="minutes")
+                yield Button("Hours", id="hours")
+                yield Button("Days", id="days")
+
+            yield Static("Others can use this URL to upload files directly", classes="help-text")
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Generate", variant="primary", id="generate")
+                yield Button("Cancel", id="cancel")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id in ["minutes", "hours", "days"]:
+            self.time_unit = event.button.id
+            # Update button variants to show selection
+            for button in self.query("Button"):
+                if button.id in ["minutes", "hours", "days"]:
+                    button.variant = "primary" if button.id == self.time_unit else "default"
+
+        elif event.button.id == "generate":
+            object_name = self.query_one("#object_name").value.strip()
+            content_type = self.query_one("#content_type").value.strip()
+            expiry_str = self.query_one("#expiry_input").value.strip()
+
+            if not object_name:
+                # Could add error display here
+                return
+
+            try:
+                expiry_value = int(expiry_str) if expiry_str else 15
+                
+                # Calculate expiry in minutes based on selected unit
+                if self.time_unit == "hours":
+                    expiry_minutes = expiry_value * 60
+                elif self.time_unit == "days":
+                    expiry_minutes = expiry_value * 60 * 24
+                else: # minutes
+                    expiry_minutes = expiry_value
+
+                self.dismiss({
+                    "object_name": object_name,
+                    "content_type": content_type if content_type else None,
+                    "expiry_minutes": expiry_minutes
+                })
+            except ValueError:
+                self.dismiss({
+                    "object_name": object_name,
+                    "content_type": content_type if content_type else None,
+                    "expiry_minutes": 15  # Default to 15 minutes if invalid input
+                })
+        else:
+            self.dismiss(None)
+
 
 class MetadataScreen(ModalScreen):
     def __init__(self, object_name: str, metadata: dict, **kwargs):
@@ -636,6 +742,7 @@ class MinioTUI(App):
         ("u", "upload_file", "Upload"),
         ("l", "download_file", "Download"),
         ("p", "presign_url", "Get URL"),
+        ("P", "upload_presign_url", "Upload URL"),
         ("m", "show_metadata", "Metadata"),
         ("v", "preview_file", "Preview"),
         ("r", "rename_item", "Rename"),
@@ -695,13 +802,13 @@ class MinioTUI(App):
         # Get available actions based on focus
         if focused and focused.id == "buckets_table":
             # Bucket context actions
-            allowed_actions = {"create_bucket", "delete_item"}
+            allowed_actions = {"create_bucket", "delete_item", "upload_presign_url"}
         elif focused and focused.id == "objects_tree":
             # Object context actions
-            allowed_actions = {"create_directory", "upload_file", "download_file", "presign_url", "show_metadata", "preview_file", "rename_item", "object_lock_info", "set_retention", "toggle_legal_hold", "delete_item"}
+            allowed_actions = {"create_directory", "upload_file", "download_file", "presign_url", "upload_presign_url", "show_metadata", "preview_file", "rename_item", "object_lock_info", "set_retention", "toggle_legal_hold", "delete_item"}
         elif focused and focused.id == "search_input":
             # Search input context - allow upload and directory creation
-            allowed_actions = {"create_directory", "upload_file"}
+            allowed_actions = {"create_directory", "upload_file", "upload_presign_url"}
         else:
             # Default: allow all actions
             return True
@@ -1137,6 +1244,35 @@ class MinioTUI(App):
                     self.set_status(f"Error: {e}")
         
         self.push_screen(PresignURLScreen(), on_expiry_submit)
+
+    def action_upload_presign_url(self):
+        if not self.current_bucket:
+            self.set_status("Select a bucket before generating upload URL.")
+            return
+        
+        # Get current path for smart prepopulation
+        current_path = self.get_current_path()
+        
+        def on_upload_url_submit(data):
+            if data:
+                object_name = data["object_name"]
+                content_type = data["content_type"]
+                expiry_minutes = data["expiry_minutes"]
+                
+                try:
+                    # Convert minutes to seconds for the API
+                    expiry_seconds = expiry_minutes * 60
+                    url = self.minio_client.generate_upload_presigned_url(
+                        self.current_bucket, 
+                        object_name, 
+                        expires_in=expiry_seconds,
+                        content_type=content_type
+                    )
+                    self.push_screen(ShowURLScreen(url))
+                except Exception as e:
+                    self.set_status(f"Error: {e}")
+        
+        self.push_screen(UploadPresignURLScreen(current_path), on_upload_url_submit)
 
     def action_show_metadata(self):
         """Show metadata for the selected object."""

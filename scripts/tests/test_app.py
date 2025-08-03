@@ -7,7 +7,7 @@ from pathlib import Path
 scripts_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(scripts_dir))
 
-from minio_tui.app import MinioTUI, CreateBucketScreen, UploadFileScreen, DownloadFileScreen, ConfirmDeleteScreen, ShowURLScreen, PresignURLScreen, RenameObjectScreen, CreateDirectoryScreen, FilePreviewScreen, get_syntax_language
+from minio_tui.app import MinioTUI, CreateBucketScreen, UploadFileScreen, DownloadFileScreen, ConfirmDeleteScreen, ShowURLScreen, PresignURLScreen, UploadPresignURLScreen, RenameObjectScreen, CreateDirectoryScreen, FilePreviewScreen, get_syntax_language
 from minio_tui.minio_client import MinioClient
 
 
@@ -203,20 +203,55 @@ class TestModalScreens(unittest.TestCase):
         """Test PresignURLScreen returns correct expiration time."""
         screen = PresignURLScreen()
         
-        # Mock the input widget
+        # Mock the input widget and buttons
         mock_input = MagicMock()
-        mock_input.value = "30"  # 30 minutes
-        
-        with patch.object(screen, 'query_one', return_value=mock_input):
-            # Mock button press event
-            mock_button = MagicMock()
-            mock_button.id = "generate"
-            mock_event = MagicMock()
-            mock_event.button = mock_button
+        mock_input.value = "10"
+        mock_minutes_button = MagicMock()
+        mock_minutes_button.id = "minutes"
+        mock_hours_button = MagicMock()
+        mock_hours_button.id = "hours"
+        mock_days_button = MagicMock()
+        mock_days_button.id = "days"
+        mock_generate_button = MagicMock()
+        mock_generate_button.id = "generate"
+
+        def query_one_side_effect(selector):
+            if selector == "#expiry_input":
+                return mock_input
+            return MagicMock()
+
+        def query_side_effect(selector):
+            if selector == "Button":
+                return [mock_minutes_button, mock_hours_button, mock_days_button, mock_generate_button]
+            return MagicMock()
+
+        with patch.object(screen, 'query_one', side_effect=query_one_side_effect), \
+             patch.object(screen, 'query', side_effect=query_side_effect), \
+             patch.object(screen, 'dismiss') as mock_dismiss:
+
+            # Test with default (minutes)
+            event = MagicMock()
+            event.button = mock_generate_button
+            screen.on_button_pressed(event)
+            mock_dismiss.assert_called_with(10)
+
+            # Test with hours
+            event.button = mock_hours_button
+            screen.on_button_pressed(event)
+            self.assertEqual(screen.time_unit, "hours")
             
-            with patch.object(screen, 'dismiss') as mock_dismiss:
-                screen.on_button_pressed(mock_event)
-                mock_dismiss.assert_called_once_with(30)
+            event.button = mock_generate_button
+            screen.on_button_pressed(event)
+            mock_dismiss.assert_called_with(10 * 60)
+
+            # Test with days
+            event.button = mock_days_button
+            screen.on_button_pressed(event)
+            self.assertEqual(screen.time_unit, "days")
+
+            event.button = mock_generate_button
+            screen.on_button_pressed(event)
+            mock_dismiss.assert_called_with(10 * 60 * 24)
 
     def test_presign_url_screen_invalid_input(self):
         """Test PresignURLScreen handles invalid input gracefully."""
@@ -237,6 +272,96 @@ class TestModalScreens(unittest.TestCase):
                 screen.on_button_pressed(mock_event)
                 # Should default to 15 minutes
                 mock_dismiss.assert_called_once_with(15)
+
+    def test_upload_presign_url_screen(self):
+        """Test UploadPresignURLScreen returns correct data."""
+        screen = UploadPresignURLScreen("uploads/")
+        
+        # Mock the input widgets
+        mock_object_name = MagicMock()
+        mock_object_name.value = "uploads/test-file.jpg"
+        
+        mock_content_type = MagicMock()
+        mock_content_type.value = "image/jpeg"
+        
+        mock_expiry = MagicMock()
+        mock_expiry.value = "2"  # 2 hours
+
+        mock_hours_button = MagicMock()
+        mock_hours_button.id = "hours"
+        mock_generate_button = MagicMock()
+        mock_generate_button.id = "generate"
+        
+        def mock_query_one(selector):
+            if selector == "#object_name":
+                return mock_object_name
+            elif selector == "#content_type":
+                return mock_content_type
+            elif selector == "#expiry_input":
+                return mock_expiry
+            return MagicMock()
+
+        def query_side_effect(selector):
+            if selector == "Button":
+                return [mock_hours_button, mock_generate_button]
+            return MagicMock()
+
+        with patch.object(screen, 'query_one', side_effect=mock_query_one), \
+             patch.object(screen, 'query', side_effect=query_side_effect), \
+             patch.object(screen, 'dismiss') as mock_dismiss:
+
+            # Select hours
+            event = MagicMock()
+            event.button = mock_hours_button
+            screen.on_button_pressed(event)
+            self.assertEqual(screen.time_unit, "hours")
+
+            # Generate
+            event.button = mock_generate_button
+            screen.on_button_pressed(event)
+
+            mock_dismiss.assert_called_once_with({
+                "object_name": "uploads/test-file.jpg",
+                "content_type": "image/jpeg",
+                "expiry_minutes": 120 # 2 hours
+            })
+
+    def test_upload_presign_url_screen_no_content_type(self):
+        """Test UploadPresignURLScreen handles empty content type."""
+        screen = UploadPresignURLScreen()
+        
+        # Mock the input widgets
+        mock_object_name = MagicMock()
+        mock_object_name.value = "test-file.txt"
+        
+        mock_content_type = MagicMock()
+        mock_content_type.value = ""  # Empty content type
+        
+        mock_expiry = MagicMock()
+        mock_expiry.value = "15"
+        
+        def mock_query_one(selector):
+            if selector == "#object_name":
+                return mock_object_name
+            elif selector == "#content_type":
+                return mock_content_type
+            elif selector == "#expiry_input":
+                return mock_expiry
+        
+        with patch.object(screen, 'query_one', side_effect=mock_query_one):
+            # Mock button press event
+            mock_button = MagicMock()
+            mock_button.id = "generate"
+            mock_event = MagicMock()
+            mock_event.button = mock_button
+            
+            with patch.object(screen, 'dismiss') as mock_dismiss:
+                screen.on_button_pressed(mock_event)
+                mock_dismiss.assert_called_once_with({
+                    "object_name": "test-file.txt",
+                    "content_type": None,  # Should be None when empty
+                    "expiry_minutes": 15
+                })
 
     def test_rename_object_screen_submit(self):
         """Test RenameObjectScreen returns new name on submit."""

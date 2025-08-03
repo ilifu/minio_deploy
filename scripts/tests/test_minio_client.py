@@ -354,5 +354,39 @@ class TestMinioClient(unittest.TestCase):
             
             self.assertIn("binary data", str(context.exception))
 
+    def test_generate_upload_presigned_url(self):
+        """Test generating upload presigned URLs."""
+        expected_url = "https://minio.example.com/bucket/object?signature=abc123"
+        self.mock_boto3_client.generate_presigned_url.return_value = expected_url
+        
+        # Test without content type
+        result = self.minio_client.generate_upload_presigned_url(
+            "test-bucket", "upload-file.txt", expires_in=1800
+        )
+        
+        self.assertEqual(result, expected_url)
+        self.mock_boto3_client.generate_presigned_url.assert_called_with(
+            "put_object",
+            Params={"Bucket": "test-bucket", "Key": "upload-file.txt"},
+            ExpiresIn=1800
+        )
+        
+        # Test with content type
+        self.mock_boto3_client.reset_mock()
+        result = self.minio_client.generate_upload_presigned_url(
+            "test-bucket", "upload-image.jpg", expires_in=3600, content_type="image/jpeg"
+        )
+        
+        self.assertEqual(result, expected_url)
+        self.mock_boto3_client.generate_presigned_url.assert_called_with(
+            "put_object",
+            Params={
+                "Bucket": "test-bucket", 
+                "Key": "upload-image.jpg",
+                "ContentType": "image/jpeg"
+            },
+            ExpiresIn=3600
+        )
+
 if __name__ == "__main__":
     unittest.main()

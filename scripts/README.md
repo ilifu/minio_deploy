@@ -83,6 +83,7 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 - `u` - Upload file to current bucket
 - `l` - Download selected object
 - `p` - Generate presigned URL for selected object
+- `g` - Generate upload URL (others can upload to this path)
 - `m` - View object metadata
 - `v` - Preview text files (small files only)
 - `r` - Rename selected object
@@ -102,7 +103,7 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 - **Object Metadata**: View file sizes, modification dates, and content types
 - **Object Lock Support**: Set retention periods and legal holds for WORM compliance
 - **Search & Filter**: Real-time search filtering of objects by name
-- **Presigned URLs**: Generate time-limited URLs (configurable expiration, default 15 minutes) 
+- **Presigned URLs**: Generate time-limited download URLs and upload URLs (configurable expiration, default 15 minutes) 
 - **Smart File Types**: Automatic content type detection based on file extensions
 - **File Type Icons**: Visual file type indicators with support for 40+ file types (🐍 Python, 🖼️ Images, 📄 Documents, etc.)
 - **File Preview**: Large modal preview of small text files (≤10KB) with syntax highlighting for 15+ languages (Python, JavaScript, JSON, YAML, etc.)

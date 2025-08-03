@@ -273,10 +273,24 @@ class MinioClient:
             raise e
 
     def generate_presigned_url(self, bucket_name, object_name, expires_in=3600):
-        """Generates a presigned URL for an object."""
+        """Generates a presigned URL for downloading an object."""
         return self.client.generate_presigned_url(
             "get_object",
             Params={"Bucket": bucket_name, "Key": object_name},
+            ExpiresIn=expires_in,
+        )
+
+    def generate_upload_presigned_url(self, bucket_name, object_name, expires_in=3600, content_type=None):
+        """Generates a presigned URL for uploading an object."""
+        params = {"Bucket": bucket_name, "Key": object_name}
+        
+        # Add content type if specified
+        if content_type:
+            params["ContentType"] = content_type
+        
+        return self.client.generate_presigned_url(
+            "put_object",
+            Params=params,
             ExpiresIn=expires_in,
         )
 

@@ -91,7 +91,7 @@
 ### Medium Priority  
 - [ ] **Bulk operations** - Multi-select for batch operations
 - [ ] **Object versioning** - Support for S3 versioning features
-- [ ] **Upload presigned URLs** - Generate URLs for client-side uploads
+- [x] **Upload presigned URLs** - Generate URLs for client-side uploads
 - [ ] **Bucket properties** - View bucket policies, CORS, lifecycle rules
 
 ### Low Priority
@@ -103,7 +103,7 @@
 ## 📊 Development Status
 
 - **Lines of Code:** ~2,500+ (app.py: ~1,000, minio_client.py: ~300, simple_config.py: ~150, tests: ~900)
-- **Test Coverage:** 64/64 tests passing (100% success rate)
+- **Test Coverage:** 67/67 tests passing (100% success rate)
 - **Features Implemented:** 20+ major features
 - **S3 API Methods:** 25+ different S3 operations supported
 - **Object Lock Compliance:** Full WORM support implemented
@@ -113,6 +113,7 @@
 
 ## 🎯 Recent Major Achievements
 
+- ✅ **Upload Presigned URLs** - Generate URLs for others to upload files directly
 - ✅ **Progress Bars** - Real-time upload/download progress with cancel functionality
 - ✅ **File Type Icons** - 40+ visual file type indicators
 - ✅ **Syntax Highlighting** - Professional code preview with 15+ languages
