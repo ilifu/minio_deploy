@@ -386,22 +386,35 @@ class FilePreviewScreen(ModalScreen):
         super().__init__(**kwargs)
         self.object_name = object_name
         self.content = content
+        self.language = get_syntax_language(object_name)
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-container"):
-            yield Static(f"File Preview: {self.object_name}", classes="modal-title")
+            # Show file name with language info
+            title_text = f"File Preview: {self.object_name}"
+            if self.language:
+                title_text += f" ({self.language})"
+            yield Static(title_text, classes="modal-title")
             
-            # Content preview with scrollable text
+            # Content preview with syntax highlighting
             from textual.widgets import TextArea
             content_widget = TextArea(
                 self.content,
                 read_only=True,
+                language=self.language if self.language else None,
+                show_line_numbers=True,
                 id="preview_content"
             )
             content_widget.cursor_blink = False
             yield content_widget
             
-            yield Static(f"Size: {len(self.content.encode('utf-8'))} bytes | Lines: {self.content.count(chr(10)) + 1}", classes="help-text")
+            # Show file statistics
+            lines_count = self.content.count('\n') + 1
+            bytes_count = len(self.content.encode('utf-8'))
+            stats_text = f"Size: {bytes_count} bytes | Lines: {lines_count}"
+            if self.language:
+                stats_text += f" | Language: {self.language.title()}"
+            yield Static(stats_text, classes="help-text")
             yield Button("Close", id="close")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -434,6 +447,62 @@ def format_date(date_obj):
     if hasattr(date_obj, 'strftime'):
         return date_obj.strftime("%Y-%m-%d %H:%M")
     return str(date_obj)
+
+def get_syntax_language(filename: str) -> str:
+    """Get the appropriate syntax highlighting language for a file based on its extension."""
+    if not filename:
+        return ""
+    
+    # Get the file extension (case insensitive)
+    ext = filename.lower().split('.')[-1] if '.' in filename else ''
+    
+    # Special handling for files without extensions
+    if not ext:
+        filename_lower = filename.lower()
+        if filename_lower in ['dockerfile', 'containerfile']:
+            return ""  # No Docker language support yet
+        elif filename_lower in ['makefile', 'gnumakefile']:
+            return ""  # No Makefile language support yet
+        elif filename_lower.startswith('readme'):
+            return "markdown"
+        return ""
+    
+    # Map file extensions to TextArea supported languages
+    language_map = {
+        # Python
+        'py': 'python', 'pyw': 'python',
+        
+        # JavaScript/TypeScript
+        'js': 'javascript', 'jsx': 'javascript', 'ts': 'javascript', 'tsx': 'javascript',
+        
+        # Web technologies
+        'html': 'html', 'htm': 'html', 'xhtml': 'html',
+        'css': 'css', 'scss': 'css', 'sass': 'css', 'less': 'css',
+        'xml': 'xml', 'xsl': 'xml', 'xsd': 'xml', 'svg': 'xml',
+        
+        # Data formats
+        'json': 'json', 'jsonl': 'json',
+        'yaml': 'yaml', 'yml': 'yaml',
+        'toml': 'toml',
+        
+        # Programming languages
+        'java': 'java', 'class': 'java',
+        'go': 'go',
+        'rs': 'rust',
+        'sql': 'sql',
+        
+        # Shell scripting
+        'sh': 'bash', 'bash': 'bash', 'zsh': 'bash', 'fish': 'bash',
+        
+        # Markdown
+        'md': 'markdown', 'markdown': 'markdown', 'mdown': 'markdown',
+        'rst': 'markdown',  # Close enough for basic highlighting
+        
+        # Regex (for some config files)
+        'gitignore': 'regex', 'ignore': 'regex',
+    }
+    
+    return language_map.get(ext, "")
 
 def get_file_icon(filename: str) -> str:
     """Get an appropriate icon for a file based on its extension."""

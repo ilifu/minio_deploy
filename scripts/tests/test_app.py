@@ -7,7 +7,7 @@ from pathlib import Path
 scripts_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(scripts_dir))
 
-from minio_tui.app import MinioTUI, CreateBucketScreen, UploadFileScreen, DownloadFileScreen, ConfirmDeleteScreen, ShowURLScreen, PresignURLScreen, RenameObjectScreen, CreateDirectoryScreen, FilePreviewScreen
+from minio_tui.app import MinioTUI, CreateBucketScreen, UploadFileScreen, DownloadFileScreen, ConfirmDeleteScreen, ShowURLScreen, PresignURLScreen, RenameObjectScreen, CreateDirectoryScreen, FilePreviewScreen, get_syntax_language
 from minio_tui.minio_client import MinioClient
 
 
@@ -364,12 +364,17 @@ class TestModalScreens(unittest.TestCase):
 
     def test_file_preview_screen(self):
         """Test FilePreviewScreen displays content correctly."""
-        test_content = "Hello, World!\nThis is a test file.\nLine 3"
-        screen = FilePreviewScreen("test.txt", test_content)
+        test_content = "def hello():\n    print('Hello, World!')\n    return True"
+        screen = FilePreviewScreen("test.py", test_content)
         
-        # Test that the screen initializes with correct content
-        self.assertEqual(screen.object_name, "test.txt")
+        # Test that the screen initializes with correct content and language
+        self.assertEqual(screen.object_name, "test.py")
         self.assertEqual(screen.content, test_content)
+        self.assertEqual(screen.language, "python")
+        
+        # Test plain text file
+        plain_screen = FilePreviewScreen("readme.txt", "Plain text content")
+        self.assertEqual(plain_screen.language, "")
         
         # Mock button press event for close
         mock_button = MagicMock()
@@ -398,6 +403,40 @@ class TestModalScreens(unittest.TestCase):
         self.assertFalse(app.is_text_file("video.mp4"))
         self.assertFalse(app.is_text_file("archive.zip"))
         self.assertFalse(app.is_text_file("binary.exe"))
+
+    def test_syntax_language_detection(self):
+        """Test syntax language detection for file previews."""
+        # Test programming languages
+        self.assertEqual(get_syntax_language("script.py"), "python")
+        self.assertEqual(get_syntax_language("app.js"), "javascript")
+        self.assertEqual(get_syntax_language("component.tsx"), "javascript")
+        self.assertEqual(get_syntax_language("main.go"), "go")
+        self.assertEqual(get_syntax_language("lib.rs"), "rust")
+        self.assertEqual(get_syntax_language("Main.java"), "java")
+        
+        # Test web technologies
+        self.assertEqual(get_syntax_language("index.html"), "html")
+        self.assertEqual(get_syntax_language("styles.css"), "css")
+        self.assertEqual(get_syntax_language("style.scss"), "css")
+        self.assertEqual(get_syntax_language("data.xml"), "xml")
+        
+        # Test data formats
+        self.assertEqual(get_syntax_language("config.json"), "json")
+        self.assertEqual(get_syntax_language("docker-compose.yml"), "yaml")
+        self.assertEqual(get_syntax_language("pyproject.toml"), "toml")
+        
+        # Test shell scripts
+        self.assertEqual(get_syntax_language("script.sh"), "bash")
+        self.assertEqual(get_syntax_language("install.bash"), "bash")
+        
+        # Test markdown
+        self.assertEqual(get_syntax_language("README.md"), "markdown")
+        self.assertEqual(get_syntax_language("README"), "markdown")  # Special case
+        
+        # Test unknown extensions
+        self.assertEqual(get_syntax_language("binary.exe"), "")
+        self.assertEqual(get_syntax_language("image.png"), "")
+        self.assertEqual(get_syntax_language(""), "")
 
 
 if __name__ == "__main__":

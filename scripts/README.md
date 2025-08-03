@@ -99,7 +99,7 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 - **Presigned URLs**: Generate time-limited URLs (configurable expiration, default 15 minutes) 
 - **Smart File Types**: Automatic content type detection based on file extensions
 - **File Type Icons**: Visual file type indicators with support for 40+ file types (🐍 Python, 🖼️ Images, 📄 Documents, etc.)
-- **File Preview**: Quick preview of small text files (≤10KB) with syntax-aware detection
+- **File Preview**: Quick preview of small text files (≤10KB) with syntax highlighting for 15+ languages (Python, JavaScript, JSON, YAML, etc.)
 - **Context Menus**: Different keybindings available based on current focus
 - **Real-time Updates**: Object counts and listings update automatically
 
