@@ -1,37 +1,24 @@
 import boto3
 import os
 import sys
-from .config import settings
+from .simple_config import settings
 
 class MinioClient:
     def __init__(self, client=None):
         if client:
             self.client = client
         else:
-            # Use .get() to safely access potentially missing keys
-            endpoint_url = settings.get("MINIO.ENDPOINT_URL")
-            access_key = settings.get("MINIO.ACCESS_KEY")
-            secret_key = settings.get("MINIO.SECRET_KEY")
-
-            # Now, check if any of the required values are missing
-            if not all([endpoint_url, access_key, secret_key]):
-                missing = []
-                if not endpoint_url: missing.append("MINIO.ENDPOINT_URL")
-                if not access_key: missing.append("MINIO.ACCESS_KEY")
-                if not secret_key: missing.append("MINIO.SECRET_KEY")
-                raise ValueError(
-                    f"Missing configuration: {', '.join(missing)}. "
-                    "Please create a config.toml or .env file in your current directory, "
-                    "or set the corresponding environment variables. "
-                    "See the README in the 'scripts' directory for more details."
+            # Get MinIO configuration using the simplified config system
+            try:
+                minio_config = settings.get_minio_config()
+                self.client = boto3.client(
+                    "s3",
+                    endpoint_url=minio_config["endpoint_url"],
+                    aws_access_key_id=minio_config["access_key"],
+                    aws_secret_access_key=minio_config["secret_key"],
                 )
-
-            self.client = boto3.client(
-                "s3",
-                endpoint_url=endpoint_url,
-                aws_access_key_id=access_key,
-                aws_secret_access_key=secret_key,
-            )
+            except ValueError as e:
+                raise ValueError(str(e))
 
     def list_buckets(self):
         """Lists all buckets in the MinIO instance."""

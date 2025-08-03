@@ -20,7 +20,7 @@ A Textual TUI for interacting with a MinIO instance. Features a dual-panel inter
 
 ## Configuration
 
-The application can be configured using a `config.toml` file, a `.env` file, or environment variables. The application will look for these files in the directory where it is run.
+The application can be configured using a `config.toml` file or environment variables. Environment variables take precedence over TOML file settings.
 
 **`config.toml` example:**
 
@@ -31,19 +31,25 @@ access_key = "your-access-key"
 secret_key = "your-secret-key"
 ```
 
-**.env example:**
-```
-MINIO_TUI_MINIO_ENDPOINT_URL="https://your-minio-server.com"
-MINIO_TUI_MINIO_ACCESS_KEY="your-access-key"
-MINIO_TUI_MINIO_SECRET_KEY="your-secret-key"
-```
+The application will look for config files in this order:
+1. `config.toml` in the current directory
+2. `minio_tui.toml` in the current directory  
+3. `~/.config/minio_tui/config.toml` in your home directory
 
 **Environment variables:**
 
-The application can also be configured using environment variables with the prefix `MINIO_TUI_`. For example:
+You can also configure the application using environment variables with the prefix `MINIO_TUI_`:
 - `MINIO_TUI_MINIO_ENDPOINT_URL`
 - `MINIO_TUI_MINIO_ACCESS_KEY`
 - `MINIO_TUI_MINIO_SECRET_KEY`
+
+**Example:**
+```bash
+export MINIO_TUI_MINIO_ENDPOINT_URL="https://your-minio-server.com"
+export MINIO_TUI_MINIO_ACCESS_KEY="your-access-key"
+export MINIO_TUI_MINIO_SECRET_KEY="your-secret-key"
+minio-tui
+```
 
 All three configuration values are required for the application to run.
 
