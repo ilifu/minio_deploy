@@ -35,6 +35,64 @@ class TestMinioTUI(unittest.TestCase):
             self.assertTrue(self.app.check_action("focus_next", {}))
             self.assertTrue(self.app.check_action("focus_previous", {}))
 
+    def test_get_object_tree_actions_no_bucket(self):
+        """Test object tree actions when no bucket is selected."""
+        # Mock tree widget with no current bucket
+        mock_tree = MagicMock()
+        mock_tree.cursor_node = MagicMock()
+        
+        with patch.object(self.app, 'query_one', return_value=mock_tree), \
+             patch.object(self.app, 'current_bucket', None):
+            
+            actions = self.app._get_object_tree_actions()
+            expected = {"create_directory", "upload_file", "upload_presign_url"}
+            self.assertEqual(actions, expected)
+
+    def test_get_object_tree_actions_file_selected(self):
+        """Test object tree actions when a file is selected."""
+        # Mock tree widget with file node selected
+        mock_tree = MagicMock()
+        mock_node = MagicMock()
+        mock_node.data = "test-file.txt"  # File object (no trailing slash)
+        mock_tree.cursor_node = mock_node
+        
+        with patch.object(self.app, 'query_one', return_value=mock_tree), \
+             patch.object(self.app, 'current_bucket', "test-bucket"):
+            
+            actions = self.app._get_object_tree_actions()
+            expected = {"download_file", "presign_url", "show_metadata", "preview_file", "rename_item", "object_lock_info", "set_retention", "toggle_legal_hold", "delete_item"}
+            self.assertEqual(actions, expected)
+
+    def test_get_object_tree_actions_directory_selected(self):
+        """Test object tree actions when a directory is selected."""
+        # Mock tree widget with directory node selected
+        mock_tree = MagicMock()
+        mock_node = MagicMock()
+        mock_node.data = "test-folder/"  # Directory object (trailing slash)
+        mock_tree.cursor_node = mock_node
+        
+        with patch.object(self.app, 'query_one', return_value=mock_tree), \
+             patch.object(self.app, 'current_bucket', "test-bucket"):
+            
+            actions = self.app._get_object_tree_actions()
+            expected = {"create_directory", "upload_file", "upload_presign_url", "delete_item"}
+            self.assertEqual(actions, expected)
+
+    def test_get_object_tree_actions_folder_node(self):
+        """Test object tree actions when a folder node (no data) is selected."""
+        # Mock tree widget with folder node selected (no data attribute)
+        mock_tree = MagicMock()
+        mock_node = MagicMock()
+        mock_node.data = None  # Folder node without data
+        mock_tree.cursor_node = mock_node
+        
+        with patch.object(self.app, 'query_one', return_value=mock_tree), \
+             patch.object(self.app, 'current_bucket', "test-bucket"):
+            
+            actions = self.app._get_object_tree_actions()
+            expected = {"create_directory", "upload_file", "upload_presign_url", "delete_item"}
+            self.assertEqual(actions, expected)
+
     def test_update_bucket_table_logic(self):
         """Test bucket table update logic without UI dependencies."""
         # Mock the widgets that would be queried

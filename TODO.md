@@ -169,11 +169,19 @@
 
 **Development Progress:**
 - [x] Research S3/MinIO bucket property APIs and compatibility
-- [x] Design bucket properties modal UI layout  
+- [x] Design bucket properties modal UI layout
+- [x] **UI Improvements**: Enhanced context-aware keybindings and fixed tree leaf arrows
 - [ ] Implement bucket property retrieval methods in MinioClient
 - [ ] Create BucketPropertiesScreen modal with tabbed interface
 - [ ] Add keybinding and action integration
 - [ ] Write comprehensive tests for new functionality
 - [ ] Update documentation and help text
+
+**Recent UI Enhancements:**
+- [x] **Context-Aware Keybindings**: Footer now shows only relevant actions based on selection
+  - Files: Download, Get URL, Metadata, Preview, Rename, Object Lock options
+  - Directories: Upload, Upload URL, New Folder, Delete
+  - Buckets: Create Bucket, Delete, Upload URL
+- [x] **Tree View Polish**: Removed expand arrows from file leaf nodes (cleaner appearance)
 
 The MinIO TUI has evolved into a feature-rich, professional-grade S3-compatible object storage management tool with enterprise features, advanced UI/UX, modern code preview capabilities, and comprehensive test coverage. The project has significantly exceeded its original scope while maintaining excellent code quality and user experience.

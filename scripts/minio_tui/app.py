@@ -780,8 +780,13 @@ class MinioTUI(App):
     def on_focus(self, event: Focus) -> None:
         """Update footer when focus changes."""
         # Force footer to refresh to show current context bindings
-        footer = self.query_one(Footer)
-        footer.refresh()
+        self.refresh_bindings()
+
+    def on_tree_node_highlighted(self, event: Tree.NodeHighlighted) -> None:
+        """Update footer when tree cursor moves."""
+        if event.control.id == "objects_tree":
+            # Force the app to re-evaluate its bindings when tree cursor moves
+            self.call_after_refresh(self.refresh_bindings)
 
     def on_input_changed(self, event: Input.Changed) -> None:
         """Handle search input changes."""
@@ -791,7 +796,7 @@ class MinioTUI(App):
                 self.update_object_tree(self.all_objects)
 
     def check_action(self, action: str, parameters) -> bool | None:
-        """Control which actions are available based on current focus."""
+        """Control which actions are available based on current focus and selection."""
         focused = self.focused
         
         # Always allow navigation and system actions
@@ -804,8 +809,8 @@ class MinioTUI(App):
             # Bucket context actions
             allowed_actions = {"create_bucket", "delete_item", "upload_presign_url"}
         elif focused and focused.id == "objects_tree":
-            # Object context actions
-            allowed_actions = {"create_directory", "upload_file", "download_file", "presign_url", "upload_presign_url", "show_metadata", "preview_file", "rename_item", "object_lock_info", "set_retention", "toggle_legal_hold", "delete_item"}
+            # Object context actions - more refined based on selection
+            allowed_actions = self._get_object_tree_actions()
         elif focused and focused.id == "search_input":
             # Search input context - allow upload and directory creation
             allowed_actions = {"create_directory", "upload_file", "upload_presign_url"}
@@ -814,6 +819,34 @@ class MinioTUI(App):
             return True
         
         return action in allowed_actions
+
+    def _get_object_tree_actions(self) -> set[str]:
+        """Get context-specific actions for objects tree based on current selection."""
+        try:
+            tree = self.query_one("#objects_tree")
+            node = tree.cursor_node
+            
+            if not node or not self.current_bucket:
+                # No selection or no bucket - only allow basic actions
+                return {"create_directory", "upload_file", "upload_presign_url"}
+            
+            # Check if we're on a file (has data) or directory/empty space
+            if node.data:
+                # We're on a file object
+                is_directory = node.data.endswith('/')
+                if is_directory:
+                    # Directory selected - upload/create actions + directory-specific actions
+                    return {"create_directory", "upload_file", "upload_presign_url", "delete_item"}
+                else:
+                    # File selected - file-specific actions
+                    return {"download_file", "presign_url", "show_metadata", "preview_file", "rename_item", "object_lock_info", "set_retention", "toggle_legal_hold", "delete_item"}
+            else:
+                # Directory node without data (folder in tree) or root - upload/create actions
+                return {"create_directory", "upload_file", "upload_presign_url", "delete_item"}
+                
+        except Exception:
+            # Fallback to basic actions if anything goes wrong
+            return {"create_directory", "upload_file", "upload_presign_url"}
 
     def load_buckets_and_counts(self):
         """
@@ -927,6 +960,11 @@ class MinioTUI(App):
                         display_label,
                         data=obj_path if is_file else None
                     )
+                    
+                    # Disable expand arrow for leaf nodes (files)
+                    if is_file:
+                        new_node.allow_expand = False
+                    
                     nodes[current_path] = new_node
                 
                 parent_path = current_path
