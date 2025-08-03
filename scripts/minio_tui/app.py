@@ -409,6 +409,68 @@ def format_date(date_obj):
         return date_obj.strftime("%Y-%m-%d %H:%M")
     return str(date_obj)
 
+def get_file_icon(filename: str) -> str:
+    """Get an appropriate icon for a file based on its extension."""
+    if not filename or filename.endswith('/'):
+        return "📁"  # Directory
+    
+    # Get the file extension (case insensitive)
+    ext = filename.lower().split('.')[-1] if '.' in filename else ''
+    
+    # Icon mapping for common file types
+    icon_map = {
+        # Images
+        'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️', 'bmp': '🖼️', 
+        'svg': '🖼️', 'webp': '🖼️', 'ico': '🖼️', 'tiff': '🖼️',
+        
+        # Documents
+        'pdf': '📄', 'doc': '📄', 'docx': '📄', 'txt': '📄', 'rtf': '📄',
+        'md': '📝', 'markdown': '📝',
+        
+        # Spreadsheets
+        'xls': '📊', 'xlsx': '📊', 'csv': '📊', 'ods': '📊',
+        
+        # Presentations
+        'ppt': '📈', 'pptx': '📈', 'odp': '📈',
+        
+        # Archives
+        'zip': '🗜️', 'rar': '🗜️', 'tar': '🗜️', 'gz': '🗜️', '7z': '🗜️',
+        'bz2': '🗜️', 'xz': '🗜️',
+        
+        # Code files
+        'py': '🐍', 'js': '🟨', 'ts': '🔷', 'html': '🌐', 'css': '🎨',
+        'java': '☕', 'cpp': '⚙️', 'c': '⚙️', 'h': '⚙️', 'hpp': '⚙️',
+        'php': '🐘', 'rb': '💎', 'go': '🐹', 'rs': '🦀', 'sh': '📜',
+        'sql': '🗃️', 'json': '📋', 'xml': '📋', 'yaml': '📋', 'yml': '📋',
+        
+        # Media
+        'mp4': '🎬', 'avi': '🎬', 'mkv': '🎬', 'mov': '🎬', 'wmv': '🎬',
+        'mp3': '🎵', 'wav': '🎵', 'flac': '🎵', 'aac': '🎵', 'ogg': '🎵',
+        
+        # Config/System
+        'conf': '⚙️', 'config': '⚙️', 'ini': '⚙️', 'toml': '⚙️',
+        'env': '🔧', 'log': '📊',
+        
+        # Executables
+        'exe': '⚡', 'msi': '⚡', 'deb': '📦', 'rpm': '📦', 'dmg': '📦',
+        'app': '📱', 'apk': '📱',
+    }
+    
+    return icon_map.get(ext, '📄')  # Default to document icon
+
+def extract_filename_from_label(label: str) -> str:
+    """Extract the actual filename from a tree node label that may contain an icon."""
+    # Tree node labels now have format: "icon filename" 
+    # We need to extract just the filename part
+    label_str = str(label)
+    
+    # Split by space and take everything after the first part (which should be the icon)
+    parts = label_str.split(' ', 1)
+    if len(parts) > 1:
+        return parts[1]  # Return the filename part
+    else:
+        return label_str  # Fallback to the whole string if no space found
+
 class MinioTUI(App):
     CSS_PATH = "app.css"
 
@@ -591,8 +653,16 @@ class MinioTUI(App):
                     
                     is_file = (i == len(path_parts) - 1) and not obj_path.endswith('/')
                     
+                    # Get appropriate icon and create display label
+                    if is_file:
+                        icon = get_file_icon(part)
+                        display_label = f"{icon} {part}"
+                    else:
+                        icon = get_file_icon('')  # Directory icon
+                        display_label = f"{icon} {part}"
+                    
                     new_node = parent_node.add(
-                        part,
+                        display_label,
                         data=obj_path if is_file else None
                     )
                     nodes[current_path] = new_node
@@ -646,7 +716,7 @@ class MinioTUI(App):
             path_parts = []
             current = node
             while current and current != focused.root:
-                path_parts.insert(0, str(current.label))
+                path_parts.insert(0, extract_filename_from_label(current.label))
                 current = current.parent
             
             if path_parts:
@@ -730,7 +800,7 @@ class MinioTUI(App):
                 path_parts = []
                 current = node
                 while current and current != focused.root:
-                    path_parts.insert(0, str(current.label))
+                    path_parts.insert(0, extract_filename_from_label(current.label))
                     current = current.parent
                 
                 if path_parts:
