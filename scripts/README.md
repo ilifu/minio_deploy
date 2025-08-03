@@ -113,3 +113,10 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 - Bucket renaming is not supported by S3/MinIO - buckets are immutable once created
 - Object Lock must be enabled at bucket creation time - it cannot be enabled later
 - Object Lock provides WORM (Write Once Read Many) compliance with retention periods and legal holds
+
+## Contributors
+
+- **Dane Kennedy** - Original concept and project initiation
+- **Claude (Anthropic)** - Core development, architecture design, comprehensive testing, and feature implementation
+
+This project was developed through an extensive collaboration, with Claude contributing significantly to the codebase architecture, implementing advanced features like progress bars with cancellation, syntax-highlighted file previews, Object Lock support, comprehensive testing suite (64 tests), and creating detailed development guides. The clean separation of concerns, robust error handling, and professional UI/UX design were all developed through this collaborative process.
