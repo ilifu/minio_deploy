@@ -389,7 +389,7 @@ class FilePreviewScreen(ModalScreen):
         self.language = get_syntax_language(object_name)
 
     def compose(self) -> ComposeResult:
-        with Vertical(classes="modal-container"):
+        with Vertical(classes="preview-modal-container"):
             # Show file name with language info
             title_text = f"File Preview: {self.object_name}"
             if self.language:
