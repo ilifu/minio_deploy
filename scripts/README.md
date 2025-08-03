@@ -97,7 +97,7 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 
 - **Bucket Management**: Create and delete buckets with optional Object Lock configuration
 - **Directory Management**: Create and delete directories (empty directories only)
-- **Object Operations**: Upload, download, rename, and delete objects
+- **Object Operations**: Upload, download, rename, and delete objects with progress tracking
 - **Smart Path Prepopulation**: Upload and directory creation modals auto-populate with current path
 - **Object Metadata**: View file sizes, modification dates, and content types
 - **Object Lock Support**: Set retention periods and legal holds for WORM compliance

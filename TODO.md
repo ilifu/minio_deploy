@@ -47,8 +47,8 @@
 - View bucket contents with object counts
 
 **Object Operations:**
-- Upload files with smart path prepopulation
-- Download objects with progress indication
+- Upload files with smart path prepopulation and progress bars
+- Download objects with progress bars and cancel functionality
 - Rename objects (copy + delete)
 - Delete objects/directories with confirmation
 - View detailed metadata (size, dates, content type, ETag)
@@ -90,7 +90,6 @@
 
 ### Medium Priority  
 - [ ] **Bulk operations** - Multi-select for batch operations
-- [ ] **Upload progress** - Progress bars for large file uploads
 - [ ] **Object versioning** - Support for S3 versioning features
 - [ ] **Upload presigned URLs** - Generate URLs for client-side uploads
 - [ ] **Bucket properties** - View bucket policies, CORS, lifecycle rules
@@ -114,6 +113,7 @@
 
 ## 🎯 Recent Major Achievements
 
+- ✅ **Progress Bars** - Real-time upload/download progress with cancel functionality
 - ✅ **File Type Icons** - 40+ visual file type indicators
 - ✅ **Syntax Highlighting** - Professional code preview with 15+ languages
 - ✅ **Configuration Simplification** - Removed Dynaconf, added simple TOML support

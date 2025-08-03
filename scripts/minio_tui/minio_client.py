@@ -102,13 +102,175 @@ class MinioClient:
                 'metadata': {}
             }
 
-    def upload_file(self, bucket_name, object_name, file_path):
-        """Uploads a file to a bucket."""
-        self.client.upload_file(file_path, bucket_name, object_name)
+    def upload_file(self, bucket_name, object_name, file_path, progress_callback=None, cancel_event=None):
+        """Uploads a file to a bucket with optional progress tracking and cancellation."""
+        if progress_callback or cancel_event:
+            # Use chunked upload for progress tracking and cancellation support
+            self._upload_file_chunked(bucket_name, object_name, file_path, progress_callback, cancel_event)
+        else:
+            # Use simple upload without progress
+            self.client.upload_file(file_path, bucket_name, object_name)
+    
+    def _upload_file_chunked(self, bucket_name, object_name, file_path, progress_callback=None, cancel_event=None):
+        """Upload a file in chunks to support progress tracking and cancellation."""
+        import os
+        
+        file_size = os.path.getsize(file_path)
+        chunk_size = 64 * 1024  # 64KB chunks
+        bytes_uploaded = 0
+        
+        try:
+            with open(file_path, 'rb') as file_obj:
+                # For small files, use put_object directly
+                if file_size <= chunk_size:
+                    data = file_obj.read()
+                    if cancel_event and cancel_event.is_set():
+                        raise Exception("Upload cancelled")
+                    
+                    self.client.put_object(
+                        Bucket=bucket_name,
+                        Key=object_name,
+                        Body=data
+                    )
+                    bytes_uploaded = file_size
+                    if progress_callback:
+                        progress_callback(bytes_uploaded)
+                else:
+                    # For larger files, use multipart upload
+                    response = self.client.create_multipart_upload(
+                        Bucket=bucket_name,
+                        Key=object_name
+                    )
+                    upload_id = response['UploadId']
+                    parts = []
+                    part_number = 1
+                    
+                    try:
+                        while True:
+                            if cancel_event and cancel_event.is_set():
+                                # Abort the multipart upload
+                                self.client.abort_multipart_upload(
+                                    Bucket=bucket_name,
+                                    Key=object_name,
+                                    UploadId=upload_id
+                                )
+                                raise Exception("Upload cancelled")
+                            
+                            chunk = file_obj.read(chunk_size)
+                            if not chunk:
+                                break
+                            
+                            # Upload the part
+                            part_response = self.client.upload_part(
+                                Bucket=bucket_name,
+                                Key=object_name,
+                                PartNumber=part_number,
+                                UploadId=upload_id,
+                                Body=chunk
+                            )
+                            
+                            parts.append({
+                                'ETag': part_response['ETag'],
+                                'PartNumber': part_number
+                            })
+                            
+                            bytes_uploaded += len(chunk)
+                            if progress_callback:
+                                progress_callback(bytes_uploaded)
+                            
+                            part_number += 1
+                        
+                        # Complete the multipart upload
+                        if not (cancel_event and cancel_event.is_set()):
+                            self.client.complete_multipart_upload(
+                                Bucket=bucket_name,
+                                Key=object_name,
+                                UploadId=upload_id,
+                                MultipartUpload={'Parts': parts}
+                            )
+                        
+                    except Exception as e:
+                        # Abort the multipart upload on any error
+                        try:
+                            self.client.abort_multipart_upload(
+                                Bucket=bucket_name,
+                                Key=object_name,
+                                UploadId=upload_id
+                            )
+                        except:
+                            pass  # Ignore errors when aborting
+                        raise e
+                        
+        except Exception as e:
+            if cancel_event and cancel_event.is_set():
+                raise Exception("Upload cancelled")
+            raise e
 
-    def download_file(self, bucket_name, object_name, file_path):
-        """Downloads a file from a bucket."""
-        self.client.download_file(bucket_name, object_name, file_path)
+    def download_file(self, bucket_name, object_name, file_path, progress_callback=None, cancel_event=None):
+        """Downloads a file from a bucket with optional progress tracking and cancellation."""
+        if progress_callback or cancel_event:
+            # Use chunked download for progress tracking and cancellation support
+            self._download_file_chunked(bucket_name, object_name, file_path, progress_callback, cancel_event)
+        else:
+            # Use simple download without progress
+            self.client.download_file(bucket_name, object_name, file_path)
+    
+    def _download_file_chunked(self, bucket_name, object_name, file_path, progress_callback=None, cancel_event=None):
+        """Download a file in chunks to support progress tracking and cancellation."""
+        import os
+        
+        try:
+            # Get object info
+            response = self.client.get_object(Bucket=bucket_name, Key=object_name)
+            file_size = response['ContentLength']
+            chunk_size = 64 * 1024  # 64KB chunks
+            bytes_downloaded = 0
+            
+            # Create a temporary file first
+            temp_file_path = file_path + '.tmp'
+            
+            try:
+                with open(temp_file_path, 'wb') as file_obj:
+                    body = response['Body']
+                    
+                    while True:
+                        if cancel_event and cancel_event.is_set():
+                            # Clean up temp file
+                            try:
+                                os.unlink(temp_file_path)
+                            except:
+                                pass
+                            raise Exception("Download cancelled")
+                        
+                        chunk = body.read(chunk_size)
+                        if not chunk:
+                            break
+                        
+                        file_obj.write(chunk)
+                        bytes_downloaded += len(chunk)
+                        
+                        if progress_callback:
+                            progress_callback(bytes_downloaded)
+                
+                # If we got here without cancellation, move temp file to final location
+                if not (cancel_event and cancel_event.is_set()):
+                    if os.path.exists(file_path):
+                        os.unlink(file_path)
+                    os.rename(temp_file_path, file_path)
+                    
+            except Exception as e:
+                # Clean up temp file on any error
+                try:
+                    if os.path.exists(temp_file_path):
+                        os.unlink(temp_file_path)
+                except:
+                    pass
+                raise e
+                    
+        except Exception as e:
+            if cancel_event and cancel_event.is_set():
+                raise Exception("Download cancelled")
+            raise e
 
     def generate_presigned_url(self, bucket_name, object_name, expires_in=3600):
         """Generates a presigned URL for an object."""

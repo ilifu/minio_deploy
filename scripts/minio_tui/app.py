@@ -1,7 +1,9 @@
+import os
+import threading
 from functools import partial
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal, Vertical
-from textual.widgets import Header, Footer, DataTable, Input, Static, Button, Tree
+from textual.containers import Horizontal, Vertical, Container
+from textual.widgets import Header, Footer, DataTable, Input, Static, Button, Tree, ProgressBar, Label
 from textual.widgets.tree import TreeNode
 from datetime import datetime
 from textual.widgets.data_table import RowDoesNotExist
@@ -419,6 +421,63 @@ class FilePreviewScreen(ModalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         self.dismiss()
+
+
+class ProgressScreen(ModalScreen):
+    """Modal screen to show upload/download progress with cancel option."""
+    
+    def __init__(self, operation_type: str, filename: str, total_size: int = 0):
+        super().__init__()
+        self.operation_type = operation_type  # "upload" or "download"
+        self.filename = filename
+        self.total_size = total_size
+        self.bytes_transferred = 0
+        self.cancelled = False
+        self.cancel_event = threading.Event()  # Threading event for cancellation
+        
+    def compose(self) -> ComposeResult:
+        with Container(id="progress_container"):
+            yield Label(f"{self.operation_type.title()}ing: {self.filename}", id="progress_title")
+            if self.total_size > 0:
+                yield Label(f"Size: {format_size(self.total_size)}", id="progress_size")
+            yield ProgressBar(total=100, id="progress_bar")
+            yield Label("0%", id="progress_percentage")
+            yield Label(f"0 / {format_size(self.total_size) if self.total_size > 0 else '??'}", id="progress_bytes")
+            with Horizontal():
+                yield Button("Cancel", variant="error", id="cancel_button")
+    
+    def on_mount(self) -> None:
+        pass  # Styling is handled by CSS
+        
+    def update_progress(self, bytes_transferred: int) -> None:
+        """Update the progress bar with new transfer information."""
+        if self.cancelled:
+            return
+            
+        self.bytes_transferred = bytes_transferred
+        
+        # Update progress bar
+        if self.total_size > 0:
+            percentage = int((bytes_transferred / self.total_size) * 100)
+            self.query_one("#progress_bar").update(progress=percentage)
+            self.query_one("#progress_percentage").update(f"{percentage}%")
+        else:
+            # For unknown size, show a pulsing animation or just bytes
+            self.query_one("#progress_percentage").update("...")
+        
+        # Update byte counter
+        if self.total_size > 0:
+            self.query_one("#progress_bytes").update(f"{format_size(bytes_transferred)} / {format_size(self.total_size)}")
+        else:
+            self.query_one("#progress_bytes").update(f"{format_size(bytes_transferred)}")
+    
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "cancel_button":
+            self.cancelled = True
+            self.cancel_event.set()  # Signal cancellation to worker thread
+            self.query_one("#cancel_button").disabled = True
+            self.query_one("#cancel_button").label = "Cancelling..."
+            # Note: dismiss will be called by the worker thread
 
 
 # --- Main App ---
@@ -934,13 +993,61 @@ class MinioTUI(App):
                 if object_name.endswith('/'):
                     object_name += file_path.split("/")[-1]
                 
+                # Get file size for progress tracking
                 try:
-                    self.minio_client.upload_file(self.current_bucket, object_name, file_path)
-                    self.set_status(f"File '{file_path}' uploaded as '{object_name}'.")
-                    self.show_objects(self.current_bucket)
-                except Exception as e:
-                    self.set_status(f"Error: {e}")
+                    file_size = os.path.getsize(file_path)
+                except OSError:
+                    file_size = 0
+                
+                # Create progress screen
+                filename = file_path.split("/")[-1]
+                progress_screen = ProgressScreen("upload", filename, file_size)
+                
+                def on_progress_result(result):
+                    if result and result.get("cancelled"):
+                        self.set_status("Upload cancelled.")
+                    else:
+                        # Upload completed successfully
+                        self.set_status(f"File '{file_path}' uploaded as '{object_name}'.")
+                        self.show_objects(self.current_bucket)
+                
+                # Start upload with progress tracking
+                self.push_screen(progress_screen, on_progress_result)
+                self._start_upload_with_progress(file_path, object_name, progress_screen)
+                
         self.push_screen(UploadFileScreen(current_path), on_submit)
+    
+    def _start_upload_with_progress(self, file_path: str, object_name: str, progress_screen: ProgressScreen):
+        """Start upload operation in a separate thread with progress updates."""
+        def progress_callback(bytes_transferred: int):
+            # Update progress from worker thread
+            if not progress_screen.cancelled:
+                self.call_from_thread(progress_screen.update_progress, bytes_transferred)
+        
+        def upload_worker():
+            try:
+                self.minio_client.upload_file(
+                    self.current_bucket, 
+                    object_name, 
+                    file_path, 
+                    progress_callback=progress_callback,
+                    cancel_event=progress_screen.cancel_event
+                )
+                # Upload completed successfully
+                if not progress_screen.cancelled:
+                    self.call_from_thread(progress_screen.dismiss, None)
+            except Exception as e:
+                # Upload failed or cancelled
+                if "cancelled" in str(e).lower():
+                    self.call_from_thread(progress_screen.dismiss, {"cancelled": True})
+                    self.call_from_thread(self.set_status, "Upload cancelled.")
+                else:
+                    self.call_from_thread(progress_screen.dismiss, {"error": str(e)})
+                    self.call_from_thread(self.set_status, f"Upload error: {e}")
+        
+        # Start upload in background thread
+        upload_thread = threading.Thread(target=upload_worker, daemon=True)
+        upload_thread.start()
 
     def action_download_file(self):
         if self.focused.id != "objects_tree" or not self.current_bucket:
@@ -950,14 +1057,64 @@ class MinioTUI(App):
         if not node or not node.data:
             return
         object_name = node.data
+        
         def on_submit(file_path: str):
             if file_path:
+                # Get object size for progress tracking
                 try:
-                    self.minio_client.download_file(self.current_bucket, object_name, file_path)
-                    self.set_status(f"File '{object_name}' downloaded to '{file_path}'.")
-                except Exception as e:
-                    self.set_status(f"Error: {e}")
+                    metadata = self.minio_client.get_object_metadata(self.current_bucket, object_name)
+                    file_size = metadata.get('size', 0)
+                except Exception:
+                    file_size = 0
+                
+                # Create progress screen
+                filename = object_name.split("/")[-1]
+                progress_screen = ProgressScreen("download", filename, file_size)
+                
+                def on_progress_result(result):
+                    if result and result.get("cancelled"):
+                        self.set_status("Download cancelled.")
+                    else:
+                        # Download completed successfully
+                        self.set_status(f"File '{object_name}' downloaded to '{file_path}'.")
+                
+                # Start download with progress tracking
+                self.push_screen(progress_screen, on_progress_result)
+                self._start_download_with_progress(object_name, file_path, progress_screen)
+                
         self.push_screen(DownloadFileScreen(), on_submit)
+    
+    def _start_download_with_progress(self, object_name: str, file_path: str, progress_screen: ProgressScreen):
+        """Start download operation in a separate thread with progress updates."""
+        def progress_callback(bytes_transferred: int):
+            # Update progress from worker thread
+            if not progress_screen.cancelled:
+                self.call_from_thread(progress_screen.update_progress, bytes_transferred)
+        
+        def download_worker():
+            try:
+                self.minio_client.download_file(
+                    self.current_bucket, 
+                    object_name, 
+                    file_path, 
+                    progress_callback=progress_callback,
+                    cancel_event=progress_screen.cancel_event
+                )
+                # Download completed successfully
+                if not progress_screen.cancelled:
+                    self.call_from_thread(progress_screen.dismiss, None)
+            except Exception as e:
+                # Download failed or cancelled
+                if "cancelled" in str(e).lower():
+                    self.call_from_thread(progress_screen.dismiss, {"cancelled": True})
+                    self.call_from_thread(self.set_status, "Download cancelled.")
+                else:
+                    self.call_from_thread(progress_screen.dismiss, {"error": str(e)})
+                    self.call_from_thread(self.set_status, f"Download error: {e}")
+        
+        # Start download in background thread
+        download_thread = threading.Thread(target=download_worker, daemon=True)
+        download_thread.start()
 
     def action_presign_url(self):
         if self.focused.id != "objects_tree" or not self.current_bucket:
