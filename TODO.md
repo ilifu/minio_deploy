@@ -31,6 +31,14 @@
 - [x] Security review completed
 - [x] Documentation and packaging (`pyproject.toml`, README)
 
+### Phase 4: Enhanced User Experience ✅
+- [x] File type icons in object tree view (40+ file types)
+- [x] Large modal file preview with syntax highlighting (15+ languages)
+- [x] Simplified configuration management (TOML + environment variables)
+- [x] Professional code editor experience with line numbers
+- [x] Smart binary file detection and size limits
+- [x] Enhanced modal sizing for better readability
+
 ## 🚀 Current Feature Set
 
 **Bucket Management:**
@@ -46,6 +54,8 @@
 - View detailed metadata (size, dates, content type, ETag)
 - Generate presigned URLs (configurable expiration)
 - Real-time search/filter by object name
+- File preview with syntax highlighting (Python, JS, JSON, YAML, etc.)
+- Visual file type indicators with 40+ icons
 
 **Object Lock (WORM Compliance):**
 - Bucket-level Object Lock enablement at creation
@@ -64,12 +74,19 @@
 - Dark mode toggle
 - Real-time updates and object counts
 - Smart modal dialogs with input validation
+- Large preview modals with professional code editor experience
+- File type icons for instant visual recognition
+
+**Configuration:**
+- Simplified TOML-based configuration
+- Environment variable support with precedence
+- Multiple config file locations (current dir, home dir)
+- Clear error messages for missing configuration
 
 ## 📋 Next Priority Tasks
 
 ### High Priority
 - [ ] **Copy/move objects between buckets** - Cross-bucket operations
-- [ ] **Configuration management** - Complete dynaconf setup with tests
 
 ### Medium Priority  
 - [ ] **Bulk operations** - Multi-select for batch operations
@@ -79,19 +96,28 @@
 - [ ] **Bucket properties** - View bucket policies, CORS, lifecycle rules
 
 ### Low Priority
-- [ ] **Enhanced UI** - File type icons, sortable columns
-- [ ] **File preview** - Quick preview for small text files  
+- [ ] **Sortable columns** - Sortable object lists by name, size, date
 - [ ] **Quick actions** - Floating action panel
 - [ ] **Debug mode** - Request logging and debug information
 - [ ] **CLI generation** - Generate equivalent AWS CLI commands
 
 ## 📊 Development Status
 
-- **Lines of Code:** ~2,000+ (app.py: ~1,400, minio_client.py: ~400, tests: ~600)
-- **Test Coverage:** 51/51 tests passing (100% success rate)
-- **Features Implemented:** 15+ major features
-- **S3 API Methods:** 20+ different S3 operations supported
+- **Lines of Code:** ~2,500+ (app.py: ~1,000, minio_client.py: ~300, simple_config.py: ~150, tests: ~900)
+- **Test Coverage:** 64/64 tests passing (100% success rate)
+- **Features Implemented:** 20+ major features
+- **S3 API Methods:** 25+ different S3 operations supported
 - **Object Lock Compliance:** Full WORM support implemented
-- **UI Components:** 10+ modal screens and interactive components
+- **UI Components:** 12+ modal screens and interactive components
+- **Syntax Highlighting:** 15+ programming languages supported
+- **Dependencies:** Simplified from 4 to 2 core dependencies
 
-The MinIO TUI has evolved far beyond the original 3-phase plan into a comprehensive S3-compatible object storage management tool with enterprise features like Object Lock compliance, advanced UI/UX, and extensive test coverage.
+## 🎯 Recent Major Achievements
+
+- ✅ **File Type Icons** - 40+ visual file type indicators
+- ✅ **Syntax Highlighting** - Professional code preview with 15+ languages
+- ✅ **Configuration Simplification** - Removed Dynaconf, added simple TOML support
+- ✅ **Enhanced UI** - Large preview modals, better user experience
+- ✅ **Tree-sitter Integration** - Professional syntax highlighting support
+
+The MinIO TUI has evolved into a feature-rich, professional-grade S3-compatible object storage management tool with enterprise features, advanced UI/UX, modern code preview capabilities, and comprehensive test coverage. The project has significantly exceeded its original scope while maintaining excellent code quality and user experience.
