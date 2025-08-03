@@ -63,3 +63,43 @@
     width: 100%;
     padding-top: 1;
 }
+
+#progress_container {
+    width: 60;
+    height: 15;
+    background: $surface;
+    padding: 1;
+    border: thick $primary-lighten-2;
+    align: center middle;
+}
+
+#progress_title {
+    text-align: center;
+    width: 100%;
+    color: $primary;
+    text-style: bold;
+}
+
+#progress_size {
+    text-align: center;
+    width: 100%;
+    color: $text-muted;
+}
+
+#progress_percentage {
+    text-align: center;
+    width: 100%;
+    color: $success;
+    text-style: bold;
+}
+
+#progress_bytes {
+    text-align: center;
+    width: 100%;
+    color: $text-muted;
+}
+
+#progress_bar {
+    width: 100%;
+    margin: 1 0;
+}
