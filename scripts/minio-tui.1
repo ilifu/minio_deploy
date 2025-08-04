@@ -1,0 +1,297 @@
+.TH MINIO-TUI 1 "January 2025" "minio-tui" "User Commands"
+.SH NAME
+minio-tui \- Terminal User Interface for MinIO S3-compatible object storage
+.SH SYNOPSIS
+.B minio-tui
+.SH DESCRIPTION
+.B minio-tui
+is a Terminal User Interface (TUI) application for managing MinIO S3-compatible object storage servers. It provides a dual-panel interface with bucket management on the left and object browsing on the right, plus context-sensitive keybindings for efficient operations.
+
+The application features comprehensive bucket and object management, Object Lock support for WORM compliance, file previews with syntax highlighting, progress tracking for uploads/downloads, and presigned URL generation.
+
+.SH CONFIGURATION
+.B minio-tui
+can be configured using TOML configuration files or environment variables. Configuration files are searched in the following order:
+
+.IP "1." 4
+.B config.toml
+in the current directory
+.IP "2." 4
+.B minio_tui.toml
+in the current directory
+.IP "3." 4
+.B ~/.config/minio_tui/config.toml
+in the user's home directory
+
+.SS Configuration File Format
+Configuration files use TOML format:
+
+.EX
+[minio]
+endpoint_url = "https://your-minio-server.com"
+access_key = "your-access-key"
+secret_key = "your-secret-key"
+.EE
+
+.SS Environment Variables
+Environment variables can be used to override configuration file settings. All variables use the prefix
+.BR MINIO_TUI_ :
+
+.TP
+.B MINIO_TUI_MINIO_ENDPOINT_URL
+MinIO server endpoint URL
+.TP
+.B MINIO_TUI_MINIO_ACCESS_KEY
+Access key for authentication
+.TP
+.B MINIO_TUI_MINIO_SECRET_KEY
+Secret key for authentication
+
+Example:
+.EX
+export MINIO_TUI_MINIO_ENDPOINT_URL="https://your-minio-server.com"
+export MINIO_TUI_MINIO_ACCESS_KEY="your-access-key"
+export MINIO_TUI_MINIO_SECRET_KEY="your-secret-key"
+minio-tui
+.EE
+
+.SH INTERFACE
+The TUI features a two-panel layout:
+.IP "\(bu" 4
+.B Left Panel:
+Bucket list with object counts
+.IP "\(bu" 4
+.B Right Panel:
+Object tree view showing folder hierarchy
+.IP "\(bu" 4
+.B Status Bar:
+Context-sensitive keybindings and status messages
+.IP "\(bu" 4
+.B Search Box:
+Real-time object filtering by name
+
+Use
+.B Tab
+to switch between panels. The status bar shows available keybindings based on the current context.
+
+.SH KEYBINDINGS
+
+.SS General Navigation
+.TP
+.B Tab
+Switch between panels (buckets ↔ objects)
+.TP
+.B ↑/↓, j/k
+Navigate within panels
+.TP
+.B Enter
+Select/expand items
+.TP
+.B Esc
+Cancel operations or close modals
+
+.SS System Actions
+.TP
+.B h
+Show help screen with all keybindings
+.TP
+.B d
+Toggle dark/light mode
+.TP
+.B q
+Quit application
+
+.SS Bucket Operations (Left Panel)
+.TP
+.B c
+Create new bucket (with optional Object Lock)
+.TP
+.B x
+Delete selected bucket (with confirmation)
+.TP
+.B P
+Generate upload URL for bucket
+
+.SS Object Operations (Right Panel)
+.TP
+.B u
+Upload file (with progress bar and cancellation)
+.TP
+.B l
+Download selected object (with progress bar and cancellation)
+.TP
+.B p
+Generate presigned download URL
+.TP
+.B P
+Generate presigned upload URL
+.TP
+.B m
+View object metadata (size, dates, content type, ETag)
+.TP
+.B v
+Preview text files (with syntax highlighting)
+.TP
+.B r
+Rename selected object
+.TP
+.B x
+Delete selected object/directory
+
+.SS Directory Operations
+.TP
+.B f
+Create new directory/folder
+.TP
+.B x
+Delete empty directory (when directory is selected)
+
+.SS Object Lock Operations (WORM Compliance)
+.TP
+.B o
+View Object Lock information
+.TP
+.B t
+Set retention period (GOVERNANCE/COMPLIANCE modes)
+.TP
+.B H
+Toggle legal hold (ON/OFF)
+
+.SS Search and Filtering
+Type in the search box to filter objects by name in real-time. Press
+.B Esc
+in the search box to clear the filter.
+
+.SH FEATURES
+
+.SS Core Features
+.IP "\(bu" 4
+Dual-panel layout with intuitive navigation
+.IP "\(bu" 4
+Context-aware keybindings (only relevant actions shown)
+.IP "\(bu" 4
+Real-time object counts and status updates
+.IP "\(bu" 4
+Smart path completion for uploads and directory creation
+
+.SS File Management
+.IP "\(bu" 4
+Progress bars with cancellation support (Esc during transfer)
+.IP "\(bu" 4
+File type icons (🐍 Python, 📄 Documents, 🖼️ Images, etc.)
+.IP "\(bu" 4
+Syntax highlighting for 15+ programming languages
+.IP "\(bu" 4
+Binary file detection with size limits for preview
+
+.SS Advanced Features
+.IP "\(bu" 4
+WORM compliance with Object Lock support
+.IP "\(bu" 4
+Presigned URLs for secure sharing and uploads
+.IP "\(bu" 4
+Bucket creation with Object Lock configuration
+.IP "\(bu" 4
+Individual object retention periods and legal holds
+
+.SH OBJECT LOCK (WORM COMPLIANCE)
+.B minio-tui
+supports S3 Object Lock for Write-Once-Read-Many (WORM) compliance:
+
+.IP "\(bu" 4
+.B Bucket-level Object Lock:
+Must be enabled at bucket creation time
+.IP "\(bu" 4
+.B Retention Modes:
+GOVERNANCE (can be overridden by privileged users) or COMPLIANCE (cannot be overridden)
+.IP "\(bu" 4
+.B Retention Periods:
+Set specific retention periods for individual objects
+.IP "\(bu" 4
+.B Legal Holds:
+Enable/disable legal holds independently of retention periods
+
+Note: Object Lock cannot be enabled on existing buckets - it must be configured during bucket creation.
+
+.SH FILE PREVIEW
+The application supports previewing text files up to 10KB in size with syntax highlighting for:
+
+.IP "\(bu" 4
+Programming languages: Python, JavaScript, TypeScript, Java, C/C++, Go, Rust, PHP, Ruby
+.IP "\(bu" 4
+Data formats: JSON, XML, YAML, CSV, SQL
+.IP "\(bu" 4
+Web technologies: HTML, CSS, Markdown
+.IP "\(bu" 4
+Configuration files: TOML, INI, Dockerfile, shell scripts
+
+Binary files are automatically detected and cannot be previewed.
+
+.SH LIMITATIONS
+
+.IP "\(bu" 4
+.B Bucket renaming:
+Not supported (S3/MinIO limitation)
+.IP "\(bu" 4
+.B Object Lock:
+Must be enabled at bucket creation time
+.IP "\(bu" 4
+.B Directory deletion:
+Requires directories to be empty
+.IP "\(bu" 4
+.B File preview:
+Limited to text files ≤10KB
+
+.SH EXAMPLES
+
+.SS Basic Usage
+.EX
+# Run with configuration file
+minio-tui
+
+# Run with environment variables
+export MINIO_TUI_MINIO_ENDPOINT_URL="https://play.min.io"
+export MINIO_TUI_MINIO_ACCESS_KEY="minioadmin"
+export MINIO_TUI_MINIO_SECRET_KEY="minioadmin"
+minio-tui
+.EE
+
+.SS Configuration File Example
+.EX
+# ~/.config/minio_tui/config.toml
+[minio]
+endpoint_url = "https://my-minio.example.com"
+access_key = "my-access-key"
+secret_key = "my-secret-key"
+.EE
+
+.SH FILES
+.TP
+.B config.toml
+Configuration file in current directory
+.TP
+.B minio_tui.toml
+Alternative configuration file in current directory
+.TP
+.B ~/.config/minio_tui/config.toml
+User configuration file
+
+.SH EXIT STATUS
+.B minio-tui
+returns 0 on successful operation and non-zero on error.
+
+.SH SEE ALSO
+.BR mc (1),
+.BR aws-cli (1)
+
+MinIO Documentation: https://min.io/docs/
+
+.SH AUTHOR
+.B minio-tui
+was developed by Dane Kennedy with comprehensive implementation by Claude (Anthropic).
+
+.SH REPORTING BUGS
+Report bugs and issues at: https://github.com/your-repo/minio-deploy
+
+.SH COPYRIGHT
+This is free software; see the source for copying conditions. There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

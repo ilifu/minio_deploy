@@ -22,3 +22,6 @@ exclude = ["tests*"]
 
 [tool.setuptools.package-data]
 minio_tui = ["*.css"]
+
+[tool.setuptools.data-files]
+"share/man/man1" = ["minio-tui.1"]

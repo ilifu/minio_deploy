@@ -61,6 +61,12 @@ Once installed, you can run the application using the following command:
 minio-tui
 ```
 
+To view the comprehensive manual page after installation:
+
+```bash
+man minio-tui
+```
+
 ## Interface
 
 The TUI features a two-panel layout:
@@ -72,27 +78,30 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 
 ## Keybindings
 
+### General
+- `h` - Show comprehensive help screen with all keybindings
+- `d` - Toggle dark mode
+- `q` - Quit application
+- `Tab` - Switch between panels
+
 ### Bucket Panel (Left)
 - `c` - Create new bucket
 - `x` - Delete selected bucket
-- `d` - Toggle dark mode
-- `q` - Quit application
+- `P` - Generate upload URL (others can upload to this bucket)
 
 ### Object Panel (Right)
 - `f` - Create new directory/folder
 - `u` - Upload file to current bucket
 - `l` - Download selected object
 - `p` - Generate presigned URL for selected object
-- `g` - Generate upload URL (others can upload to this path)
+- `P` - Generate upload URL (others can upload to this path)
 - `m` - View object metadata
 - `v` - Preview text files (small files only)
 - `r` - Rename selected object
 - `o` - View Object Lock information
 - `t` - Set retention period (Object Lock)
-- `h` - Toggle legal hold (Object Lock)
+- `H` - Toggle legal hold (Object Lock)
 - `x` - Delete selected object/directory (directories must be empty)
-- `d` - Toggle dark mode
-- `q` - Quit application
 
 ## Features
 
@@ -108,6 +117,7 @@ Use **Tab** to switch between panels. The status bar at the bottom shows context
 - **File Type Icons**: Visual file type indicators with support for 40+ file types (🐍 Python, 🖼️ Images, 📄 Documents, etc.)
 - **File Preview**: Large modal preview of small text files (≤10KB) with syntax highlighting for 15+ languages (Python, JavaScript, JSON, YAML, etc.)
 - **Context-Aware Keybindings**: Footer dynamically shows only relevant actions based on current selection (files vs directories vs buckets)
+- **Comprehensive Help System**: Built-in help screen (`h` key) with all keybindings and detailed man page documentation
 - **Real-time Updates**: Object counts and listings update automatically
 - **Enhanced UI/UX**: Clean tree view without leaf arrows, responsive footer that updates as you navigate
 

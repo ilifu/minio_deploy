@@ -2,8 +2,8 @@ import os
 import threading
 from functools import partial
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal, Vertical, Container
-from textual.widgets import Header, Footer, DataTable, Input, Static, Button, Tree, ProgressBar, Label
+from textual.containers import Horizontal, Vertical, Container, ScrollableContainer
+from textual.widgets import Header, Footer, DataTable, Input, Static, Button, Tree, ProgressBar, Label, TextArea
 from textual.widgets.tree import TreeNode
 from datetime import datetime
 from textual.widgets.data_table import RowDoesNotExist
@@ -12,6 +12,104 @@ from textual.events import Focus
 from .minio_client import MinioClient
 
 # --- Modal Screens ---
+
+class HelpScreen(ModalScreen):
+    """Help screen showing all available keybindings and their descriptions."""
+    
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="modal-container help-screen"):
+            yield Static("MinIO TUI - Help", classes="modal-title")
+            
+            # Use TextArea for better scrollbar handling
+            yield TextArea(
+                self._get_help_content(), 
+                read_only=True,
+                show_line_numbers=False,
+                classes="help-content"
+            )
+            
+            with Horizontal(classes="modal-buttons"):
+                yield Button("Close", variant="primary", id="close")
+    
+    def _get_help_content(self) -> str:
+        """Generate comprehensive help content with all keybindings."""
+        help_text = """
+MinIO TUI provides a dual-panel interface for managing S3-compatible object storage.
+
+🔹 GENERAL NAVIGATION
+  Tab                   Switch between panels (buckets ↔ objects)
+  ↑/↓ or j/k           Navigate within panels
+  Enter                 Select/expand items
+  Esc                   Cancel operations or close modals
+
+🔹 SYSTEM ACTIONS
+  h                     Show this help screen
+  d                     Toggle dark/light mode
+  q                     Quit application
+
+🔹 BUCKET OPERATIONS (Left Panel)
+  c                     Create new bucket (with optional Object Lock)
+  x                     Delete selected bucket (with confirmation)
+  P                     Generate upload URL for bucket
+
+🔹 OBJECT OPERATIONS (Right Panel)
+  u                     Upload file (with progress bar)
+  l                     Download selected object (with progress bar)
+  p                     Generate presigned download URL
+  P                     Generate presigned upload URL
+  m                     View object metadata (size, dates, content type)
+  v                     Preview text files (with syntax highlighting)
+  r                     Rename selected object
+  x                     Delete selected object/directory
+
+🔹 DIRECTORY OPERATIONS
+  f                     Create new directory/folder
+  x                     Delete empty directory
+
+🔹 OBJECT LOCK (WORM Compliance)
+  o                     View Object Lock information
+  t                     Set retention period (GOVERNANCE/COMPLIANCE)
+  H                     Toggle legal hold (ON/OFF)
+
+🔹 SEARCH & FILTERING
+  Type in search box    Filter objects by name (real-time)
+  Esc in search box     Clear search filter
+
+🔹 FEATURES
+  • Progress bars with cancellation support (Esc during transfer)
+  • File type icons (🐍 Python, 📄 Documents, 🖼️ Images, etc.)
+  • Syntax highlighting for 15+ programming languages
+  • Smart path completion for uploads and directory creation
+  • Context-aware keybindings (only relevant actions shown)
+  • Real-time object counts and status updates
+  • WORM compliance with Object Lock support
+  • Presigned URLs for secure sharing and uploads
+
+🔹 CONFIGURATION
+  Configuration can be provided via:
+  • config.toml in current directory
+  • minio_tui.toml in current directory
+  • ~/.config/minio_tui/config.toml
+  • Environment variables (MINIO_TUI_MINIO_*)
+
+  Required settings:
+  [minio]
+  endpoint_url = "https://your-minio-server.com"
+  access_key = "your-access-key"
+  secret_key = "your-secret-key"
+
+🔹 NOTES
+  • Bucket renaming is not supported (S3/MinIO limitation)
+  • Object Lock must be enabled at bucket creation time
+  • Directory deletion requires directories to be empty
+  • Binary files cannot be previewed (text files only)
+  • File size limits apply to preview (≤10KB for text files)
+"""
+        return help_text.strip()
+    
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "close":
+            self.dismiss()
 
 class CreateBucketScreen(ModalScreen):
     def __init__(self, **kwargs):
@@ -748,8 +846,9 @@ class MinioTUI(App):
         ("r", "rename_item", "Rename"),
         ("o", "object_lock_info", "Lock Info"),
         ("t", "set_retention", "Set Retention"),
-        ("h", "toggle_legal_hold", "Legal Hold"),
+        ("H", "toggle_legal_hold", "Legal Hold"),
         ("x", "delete_item", "Delete"),
+        ("h", "show_help", "Help"),
         ("q", "quit", "Quit"),
     ]
 
@@ -800,7 +899,7 @@ class MinioTUI(App):
         focused = self.focused
         
         # Always allow navigation and system actions
-        system_actions = {"toggle_dark", "quit", "focus_next", "focus_previous", "app.focus_next", "app.focus_previous"}
+        system_actions = {"toggle_dark", "quit", "show_help", "focus_next", "focus_previous", "app.focus_next", "app.focus_previous"}
         if action in system_actions:
             return True
         
@@ -1529,6 +1628,10 @@ class MinioTUI(App):
     def show_legal_hold_modal(self, object_name: str, current_status: str):
         """Show the legal hold modal with current status."""
         self.push_screen(LegalHoldScreen(object_name, current_status), self.legal_hold_callback)
+    
+    def action_show_help(self):
+        """Show the help screen with all keybindings and descriptions."""
+        self.push_screen(HelpScreen())
 
 if __name__ == "__main__":
     pass

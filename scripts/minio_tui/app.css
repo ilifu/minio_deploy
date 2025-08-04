@@ -48,6 +48,11 @@
     padding-top: 1;
 }
 
+.help-screen .modal-buttons {
+    height: 3;
+    padding-top: 1;
+}
+
 .preview-modal-container {
     width: 90%;
     height: 80%;
@@ -101,5 +106,19 @@
 
 #progress_bar {
     width: 100%;
+    margin: 1 0;
+}
+
+.help-screen {
+    width: 90%;
+    height: 85%;
+    background: $surface;
+    padding: 1;
+    border: thick $primary-lighten-2;
+    align: center middle;
+}
+
+.help-content {
+    height: 1fr;
     margin: 1 0;
 }
