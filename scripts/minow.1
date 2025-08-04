@@ -1,16 +1,16 @@
-.TH MINIO-TUI 1 "January 2025" "minio-tui" "User Commands"
+.TH MINOW 1 "January 2025" "minow" "User Commands"
 .SH NAME
-minio-tui \- Terminal User Interface for MinIO S3-compatible object storage
+minow \- Terminal User Interface for MinIO S3-compatible object storage
 .SH SYNOPSIS
-.B minio-tui
+.B minow
 .SH DESCRIPTION
-.B minio-tui
+.B minow
 is a Terminal User Interface (TUI) application for managing MinIO S3-compatible object storage servers. It provides a dual-panel interface with bucket management on the left and object browsing on the right, plus context-sensitive keybindings for efficient operations.
 
 The application features comprehensive bucket and object management, Object Lock support for WORM compliance, file previews with syntax highlighting, progress tracking for uploads/downloads, and presigned URL generation.
 
 .SH CONFIGURATION
-.B minio-tui
+.B minow
 can be configured using TOML configuration files or environment variables. Configuration files are searched in the following order:
 
 .IP "1." 4
@@ -52,7 +52,7 @@ Example:
 export MINIO_TUI_MINIO_ENDPOINT_URL="https://your-minio-server.com"
 export MINIO_TUI_MINIO_ACCESS_KEY="your-access-key"
 export MINIO_TUI_MINIO_SECRET_KEY="your-secret-key"
-minio-tui
+minow
 .EE
 
 .SH INTERFACE
@@ -195,7 +195,7 @@ Bucket creation with Object Lock configuration
 Individual object retention periods and legal holds
 
 .SH OBJECT LOCK (WORM COMPLIANCE)
-.B minio-tui
+.B minow
 supports S3 Object Lock for Write-Once-Read-Many (WORM) compliance:
 
 .IP "\(bu" 4
@@ -247,13 +247,13 @@ Limited to text files ≤10KB
 .SS Basic Usage
 .EX
 # Run with configuration file
-minio-tui
+minow
 
 # Run with environment variables
 export MINIO_TUI_MINIO_ENDPOINT_URL="https://play.min.io"
 export MINIO_TUI_MINIO_ACCESS_KEY="minioadmin"
 export MINIO_TUI_MINIO_SECRET_KEY="minioadmin"
-minio-tui
+minow
 .EE
 
 .SS Configuration File Example
@@ -277,7 +277,7 @@ Alternative configuration file in current directory
 User configuration file
 
 .SH EXIT STATUS
-.B minio-tui
+.B minow
 returns 0 on successful operation and non-zero on error.
 
 .SH SEE ALSO
@@ -287,7 +287,7 @@ returns 0 on successful operation and non-zero on error.
 MinIO Documentation: https://min.io/docs/
 
 .SH AUTHOR
-.B minio-tui
+.B minow
 was developed by Dane Kennedy with comprehensive implementation by Claude (Anthropic).
 
 .SH REPORTING BUGS

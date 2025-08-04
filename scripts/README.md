@@ -1,4 +1,4 @@
-# MinIO TUI
+# minow
 
 A Textual TUI for interacting with a MinIO instance. Features a dual-panel interface with bucket management on the left and object browsing on the right, plus context-sensitive keybindings.
 
@@ -48,7 +48,7 @@ You can also configure the application using environment variables with the pref
 export MINIO_TUI_MINIO_ENDPOINT_URL="https://your-minio-server.com"
 export MINIO_TUI_MINIO_ACCESS_KEY="your-access-key"
 export MINIO_TUI_MINIO_SECRET_KEY="your-secret-key"
-minio-tui
+minow
 ```
 
 All three configuration values are required for the application to run.
@@ -58,13 +58,13 @@ All three configuration values are required for the application to run.
 Once installed, you can run the application using the following command:
 
 ```bash
-minio-tui
+minow
 ```
 
 To view the comprehensive manual page after installation:
 
 ```bash
-man minio-tui
+man minow
 ```
 
 ## Interface

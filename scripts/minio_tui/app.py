@@ -18,7 +18,7 @@ class HelpScreen(ModalScreen):
     
     def compose(self) -> ComposeResult:
         with Vertical(classes="modal-container help-screen"):
-            yield Static("MinIO TUI - Help", classes="modal-title")
+            yield Static("minow - Help", classes="modal-title")
             
             # Use TextArea for better scrollbar handling
             yield TextArea(
@@ -34,7 +34,7 @@ class HelpScreen(ModalScreen):
     def _get_help_content(self) -> str:
         """Generate comprehensive help content with all keybindings."""
         help_text = """
-MinIO TUI provides a dual-panel interface for managing S3-compatible object storage.
+minow provides a dual-panel interface for managing S3-compatible object storage.
 
 🔹 GENERAL NAVIGATION
   Tab                   Switch between panels (buckets ↔ objects)
@@ -831,6 +831,7 @@ def extract_filename_from_label(label: str) -> str:
 
 class MinioTUI(App):
     CSS_PATH = "app.css"
+    TITLE = "minow"
 
     # Define all possible bindings - visibility controlled by check_action
     BINDINGS = [
