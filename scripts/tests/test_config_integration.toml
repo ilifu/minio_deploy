@@ -1,0 +1,4 @@
+[minio]
+endpoint_url = "http://localhost:9000"
+access_key = "testuser"
+secret_key = "testpass123"

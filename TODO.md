@@ -103,14 +103,17 @@
 
 ## 📊 Development Status
 
-- **Lines of Code:** ~2,500+ (app.py: ~1,000, minio_client.py: ~300, simple_config.py: ~150, tests: ~900)
-- **Test Coverage:** 67/67 tests passing (100% success rate)
-- **Features Implemented:** 20+ major features
+- **Lines of Code:** ~3,000+ (app.py: ~850, minio_client.py: ~480, simple_config.py: ~150, tests: ~1,100+)
+- **Test Coverage:** 75/75 tests passing (100% success rate)
+  - Unit Tests: 71 tests (mocked, fast feedback)
+  - Integration Tests: 4 tests (real MinIO API validation)
+- **Features Implemented:** 25+ major features
 - **S3 API Methods:** 25+ different S3 operations supported
 - **Object Lock Compliance:** Full WORM support implemented
 - **UI Components:** 12+ modal screens and interactive components
 - **Syntax Highlighting:** 15+ programming languages supported
 - **Dependencies:** Simplified from 4 to 2 core dependencies
+- **Testing Strategy:** Dual approach (unit + integration) with Docker automation
 
 ## 🎯 Recent Major Achievements
 
@@ -171,17 +174,22 @@
 - [x] Research S3/MinIO bucket property APIs and compatibility
 - [x] Design bucket properties modal UI layout
 - [x] **UI Improvements**: Enhanced context-aware keybindings and fixed tree leaf arrows
+- [x] **Integration Testing**: Docker-based testing with real MinIO API
 - [ ] Implement bucket property retrieval methods in MinioClient
 - [ ] Create BucketPropertiesScreen modal with tabbed interface
 - [ ] Add keybinding and action integration
 - [ ] Write comprehensive tests for new functionality
 - [ ] Update documentation and help text
 
-**Recent UI Enhancements:**
-- [x] **Context-Aware Keybindings**: Footer now shows only relevant actions based on selection
+**Recent Enhancements:**
+- [x] **Context-Aware Keybindings**: Footer dynamically shows only relevant actions based on selection
   - Files: Download, Get URL, Metadata, Preview, Rename, Object Lock options
   - Directories: Upload, Upload URL, New Folder, Delete
   - Buckets: Create Bucket, Delete, Upload URL
 - [x] **Tree View Polish**: Removed expand arrows from file leaf nodes (cleaner appearance)
+- [x] **Integration Testing**: Docker-based MinIO test environment with 4 comprehensive tests
+  - Real API validation (bucket/object lifecycle, presigned URLs, directories)
+  - Dual testing strategy: 71 unit tests + 4 integration tests
+  - Automated test runner with Docker compose
 
 The MinIO TUI has evolved into a feature-rich, professional-grade S3-compatible object storage management tool with enterprise features, advanced UI/UX, modern code preview capabilities, and comprehensive test coverage. The project has significantly exceeded its original scope while maintaining excellent code quality and user experience.

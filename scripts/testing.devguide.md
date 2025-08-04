@@ -15,12 +15,17 @@ This guide documents the comprehensive testing strategy used in the MinIO TUI pr
 ### Test Categories
 
 ```
-End-to-End Tests (5%)     # Full system integration
+End-to-End Tests (5%)     # Full system integration (future)
      ↑
-Integration Tests (25%)   # Component interaction
+Integration Tests (5%)    # Real MinIO API tests (Docker-based)
      ↑  
-Unit Tests (70%)         # Individual functions/methods
+Unit Tests (90%)         # Individual functions/methods (mocked)
 ```
+
+**Current Implementation:**
+- **Unit Tests (71)**: Fast, mocked dependencies, comprehensive coverage
+- **Integration Tests (4)**: Real MinIO server via Docker, API validation
+- **Dual Strategy**: Both approaches complement each other perfectly
 
 ## Test Structure
 
@@ -28,10 +33,14 @@ Unit Tests (70%)         # Individual functions/methods
 
 ```
 tests/
-├── test_app.py              # UI component tests
-├── test_app_actions.py      # Action and workflow tests
-├── test_minio_client.py     # Business logic tests
-├── test_simple_config.py    # Configuration tests
+├── test_app.py              # UI component tests (unit)
+├── test_app_actions.py      # Action and workflow tests (unit)
+├── test_minio_client.py     # Business logic tests (unit)
+├── test_simple_config.py    # Configuration tests (unit)
+├── integration/             # Integration tests (real MinIO)
+│   ├── __init__.py
+│   └── test_minio_integration.py
+├── test_config_integration.toml  # Integration test config
 ├── conftest.py              # Shared fixtures and utilities
 └── fixtures/                # Test data files
     ├── sample.txt
