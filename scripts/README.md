@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/minow-logo.png" alt="minow logo" width="200"/>
+</div>
+
 # minow
 
 A Textual TUI for interacting with a MinIO instance. Features a dual-panel interface with bucket management on the left and object browsing on the right, plus context-sensitive keybindings.
